@@ -1,0 +1,15 @@
+<Application x:Class="TransitShelf.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <!-- 配色字典排在第一位：PaletteService 靠位置定位它并整套替换 -->
+        <ResourceDictionary Source="Resources/Palettes/Frappe.xaml" />
+        <ResourceDictionary Source="Resources/Theme.xaml" />
+        <ResourceDictionary Source="Resources/Icons.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+</Application>

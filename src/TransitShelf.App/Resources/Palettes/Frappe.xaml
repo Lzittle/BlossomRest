@@ -1,0 +1,46 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    配色方案：Catppuccin Frappe（深色，官方调色板，MIT）。
+
+    色值对应设计稿的配色卡：
+      底色 bg #303446 · 表面 surface #414559 · 强调面（悬停）#51576D · 描边 #51576D
+      主文字 #C6D0F5 · 次文字 #A5ADCE
+      主色 accent #EA999C（玫瑰）· 辅色 #EF9F76（蜜桃）· 点缀色 #A6D189（绿）
+
+    主色是玫瑰，绿色只当点缀：钉住标记、复制成功的回执、空状态插画里的那片叶子。
+    这里是**唯一**写死颜色的地方。界面与样式一律通过语义令牌取色（DynamicResource），
+    换配色 = 换掉这个字典，见 Theme/PaletteService.cs 与姊妹文件 RosePineDawn.xaml。
+    加新令牌时两边都要加，令牌名与用途见技术框架设计 8.2。
+  -->
+
+  <!-- 表面：面板底必须完全不透明，否则会透出桌面、颜色发灰（ADR D21） -->
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#FF303446" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#FF414559" />
+  <SolidColorBrush x:Key="HoverBrush" Color="#FF51576D" />
+  <SolidColorBrush x:Key="SelectedBrush" Color="#33EA999C" />
+  <SolidColorBrush x:Key="StrokeBrush" Color="#FF51576D" />
+
+  <!-- 文字 -->
+  <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFC6D0F5" />
+  <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFA5ADCE" />
+
+  <!-- 主色：玫瑰。徽标、条目类型图标、按钮、选中描边、拖入高亮都是它 -->
+  <SolidColorBrush x:Key="AccentBrush" Color="#FFEA999C" />
+  <SolidColorBrush x:Key="AccentFillBrush" Color="#33EA999C" />
+  <SolidColorBrush x:Key="AccentLineBrush" Color="#80EA999C" />
+  <SolidColorBrush x:Key="OnAccentTextBrush" Color="#FF303446" />
+  <SolidColorBrush x:Key="DropStrokeBrush" Color="#FFEA999C" />
+
+  <!-- 辅色：蜜桃。与主色同级的第二强调，避免所有强调都是同一个颜色 -->
+  <SolidColorBrush x:Key="SupportBrush" Color="#FFEF9F76" />
+  <SolidColorBrush x:Key="SupportFillBrush" Color="#33EF9F76" />
+
+  <!-- 点缀色：绿。只用在小面积、带语义的地方：钉住、成功回执、插画的叶子 -->
+  <SolidColorBrush x:Key="HighlightBrush" Color="#FFA6D189" />
+
+  <!-- 右键菜单是系统浅色弹层，图标用中性灰才看得见 -->
+  <SolidColorBrush x:Key="MenuIconBrush" Color="#FF737994" />
+
+</ResourceDictionary>

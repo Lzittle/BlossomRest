@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!--
+      本项目不使用 .NET 工作负载（无 MAUI / WASM 等）。
+      以 zip 方式安装的 SDK 可能缺少 sdk-manifests 目录，导致引用 WPF 类库时
+      Restore 静默失败（MSB4276），因此显式关闭工作负载解析。
+    -->
+    <MSBuildEnableWorkloadResolver>false</MSBuildEnableWorkloadResolver>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <Company>TransitShelf</Company>
+    <Product>中转站</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>

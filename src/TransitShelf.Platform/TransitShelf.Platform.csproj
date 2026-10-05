@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TransitShelf.Platform</RootNamespace>
+    <!-- 使用 WPF 的 Clipboard / DataObject；本层是唯一允许接触 Win32 与 UI 相关 API 的层。 -->
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TransitShelf.Core\TransitShelf.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,41 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    配色方案：Rosé Pine Dawn（浅色，官方调色板，MIT）。
+
+    色值对应设计稿的配色卡：
+      底色 bg #FAF4ED · 表面 surface #FFFCF7 · 强调面（悬停）#F2E9E1 · 描边 #E6DCD2
+      主文字 #575279 · 次文字 #797593
+      主色 accent #B4637A（love）· 辅色 #D7827E（rose）· 点缀色 #EA9D34（gold）
+
+    令牌名与 Frappe.xaml 一一对应，只换色值。浅色这套的点缀色是金色而不是绿——
+    两套方案各自忠实于自己的调色板，界面不假设"点缀色一定是绿的"。
+  -->
+
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFAF4ED" />
+  <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#FFFFFCF7" />
+  <SolidColorBrush x:Key="HoverBrush" Color="#FFF2E9E1" />
+  <SolidColorBrush x:Key="SelectedBrush" Color="#33B4637A" />
+  <SolidColorBrush x:Key="StrokeBrush" Color="#FFE6DCD2" />
+
+  <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FF575279" />
+  <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FF797593" />
+
+  <!-- 主色：love -->
+  <SolidColorBrush x:Key="AccentBrush" Color="#FFB4637A" />
+  <SolidColorBrush x:Key="AccentFillBrush" Color="#33B4637A" />
+  <SolidColorBrush x:Key="AccentLineBrush" Color="#80B4637A" />
+  <SolidColorBrush x:Key="OnAccentTextBrush" Color="#FFFAF4ED" />
+  <SolidColorBrush x:Key="DropStrokeBrush" Color="#FFB4637A" />
+
+  <!-- 辅色：rose -->
+  <SolidColorBrush x:Key="SupportBrush" Color="#FFD7827E" />
+  <SolidColorBrush x:Key="SupportFillBrush" Color="#33D7827E" />
+
+  <!-- 点缀色：gold -->
+  <SolidColorBrush x:Key="HighlightBrush" Color="#FFEA9D34" />
+
+  <SolidColorBrush x:Key="MenuIconBrush" Color="#FF797593" />
+
+</ResourceDictionary>

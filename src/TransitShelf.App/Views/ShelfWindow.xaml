@@ -1,0 +1,355 @@
+<Window x:Class="TransitShelf.App.Views.ShelfWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="中转站"
+        Width="300" Height="400"
+        WindowStyle="None" ResizeMode="NoResize"
+        ShowInTaskbar="False" ShowActivated="False" Topmost="True"
+        AllowsTransparency="True"
+        Background="Transparent"
+        AllowDrop="True"
+        MouseEnter="OnWindowMouseEnter"
+        MouseLeave="OnWindowMouseLeave"
+        DragEnter="OnDragEnter"
+        DragOver="OnDragOver"
+        DragLeave="OnDragLeave"
+        Drop="OnDrop"
+        KeyDown="OnWindowKeyDown">
+
+  <!--
+    窗口是**透明窗口**：收起态要的是真正的圆形，而不透明窗口的外轮廓由系统（DWM）决定，
+    做不到只留圆形。代价是圆角必须自绘——由 RootBorder 的 CornerRadius 承担：
+    展开态 8（约等于原来的系统圆角），收起态 32（64×64 正好是正圆），切换见 ApplyLayout()。
+    底色是**不透明**的实色：之前用亚克力材质透出桌面，颜色会被背景拉灰（见 ADR D21）。
+  -->
+  <Border x:Name="RootBorder" CornerRadius="8" BorderThickness="1"
+          Background="{DynamicResource SurfaceBrush}"
+          BorderBrush="{DynamicResource StrokeBrush}">
+    <Grid>
+
+      <!-- 收起态：贴边胶囊把手（同时是拖放热区） -->
+      <Border x:Name="PillPanel"
+              Width="64" Height="64" CornerRadius="0"
+              Background="Transparent" BorderThickness="0"
+              Cursor="SizeAll"
+              MouseLeftButtonDown="OnPillMouseDown"
+              MouseMove="OnPillMouseMove"
+              MouseLeftButtonUp="OnPillClick">
+        <Grid>
+          <!--
+            品牌主视觉：与 exe 图标同一张玫瑰文件夹（透明底 PNG）。
+            收起态只保留窗口这一个圆角方形，不再在里面套一层圆形，避免两个形状叠加。
+          -->
+          <!--
+            图片的视觉重心比几何中心低约 59/1024（下半部的文件夹又大又实、上面的玫瑰偏轻），
+            42px 显示时约低 2.4 像素，所以整体上移 2.4 做视觉居中。
+          -->
+          <Image Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center"
+                 Source="/Assets/brand-rose.png"
+                 RenderOptions.BitmapScalingMode="HighQuality">
+            <Image.RenderTransform>
+              <TranslateTransform Y="-2.4" />
+            </Image.RenderTransform>
+          </Image>
+          <Border x:Name="CountBadge" HorizontalAlignment="Right" VerticalAlignment="Top"
+                  Margin="0,2,2,0" MinWidth="18" Height="18" CornerRadius="9"
+                  Background="{DynamicResource AccentBrush}">
+            <TextBlock x:Name="CountText" Text="0" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource OnAccentTextBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+        </Grid>
+      </Border>
+
+      <!-- 展开态：临时区面板 -->
+      <Grid x:Name="PanelRoot" PreviewMouseLeftButtonDown="OnPanelPreviewMouseDown">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="12,10,8,6">
+          <TextBlock Text="中转站" FontSize="13" FontWeight="SemiBold"
+                     Foreground="{DynamicResource PrimaryTextBrush}"
+                     VerticalAlignment="Center" />
+          <StackPanel x:Name="HeaderActions" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="收录" Style="{StaticResource TextButton}" Click="OnCollectClick"
+                    ToolTip="把剪贴板里的文字、文件或图片收进来（Ctrl+Alt+C）" />
+            <Button Content="添加" Style="{StaticResource TextButton}" Click="OnAddFilesClick"
+                    ToolTip="选择一个或多个文件加入中转站" />
+            <Button x:Name="MultiSelectButton" Content="多选" Style="{StaticResource TextButton}"
+                    Click="OnMultiSelectClick"
+                    ToolTip="勾选多条，一次复制成换行分隔的路径清单" />
+            <Button x:Name="ClearButton" Content="清空" Style="{StaticResource TextButton}" Click="OnClearClick" />
+            <Button Content="收起" Style="{StaticResource TextButton}" Click="OnCollapseClick" />
+          </StackPanel>
+
+          <!-- 批量操作条：进入多选后替换头部按钮，位置与高度不变 -->
+          <StackPanel x:Name="BatchBar" Orientation="Horizontal" HorizontalAlignment="Right"
+                      Visibility="Collapsed">
+            <TextBlock x:Name="BatchCountText" Text="已选 0 项" FontSize="11" VerticalAlignment="Center"
+                       Margin="0,0,4,0" Foreground="{DynamicResource AccentBrush}" />
+            <Button x:Name="BatchSelectAllButton" Content="全选" Style="{StaticResource TextButton}"
+                    Click="OnBatchSelectAllClick" />
+            <Button Content="复制路径清单" Style="{StaticResource TextButton}" Click="OnBatchCopyPathsClick"
+                    ToolTip="把勾选的条目复制成换行分隔的绝对路径，可直接贴进 AI 会话" />
+            <Button Content="完成" Style="{StaticResource TextButton}" Click="OnBatchExitClick" />
+          </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+          <!-- 空状态：矢量插画 + 一句引导。只在列表为空时渲染（见 ShelfWindow 的 UpdateEmptyState） -->
+          <StackPanel x:Name="EmptyState" Margin="16,14,16,0" VerticalAlignment="Top">
+            <Viewbox Width="168" Height="126" HorizontalAlignment="Center">
+              <Canvas Width="200" Height="150">
+                <!-- 托盘背后的柔光：主色压到很低的不透明度，不引入额外令牌 -->
+                <Ellipse Canvas.Left="30" Canvas.Top="40" Width="140" Height="76"
+                         Fill="{DynamicResource AccentBrush}" Opacity="0.14" />
+
+                <!-- 后排卡片 -->
+                <Canvas Canvas.Left="52" Canvas.Top="18" Width="80" Height="50" RenderTransformOrigin="0.5,0.5">
+                  <Canvas.RenderTransform>
+                    <RotateTransform Angle="-7" />
+                  </Canvas.RenderTransform>
+                  <Rectangle Width="80" Height="50" RadiusX="9" RadiusY="9"
+                             Fill="{DynamicResource SupportFillBrush}"
+                             Stroke="{DynamicResource SupportBrush}" StrokeThickness="1.2" Opacity="0.75" />
+                  <Rectangle Canvas.Left="12" Canvas.Top="15" Width="42" Height="4" RadiusX="2" RadiusY="2"
+                             Fill="{DynamicResource PrimaryTextBrush}" Opacity="0.35" />
+                  <Rectangle Canvas.Left="12" Canvas.Top="26" Width="26" Height="4" RadiusX="2" RadiusY="2"
+                             Fill="{DynamicResource PrimaryTextBrush}" Opacity="0.2" />
+                </Canvas>
+
+                <!-- 前排卡片 -->
+                <Canvas Canvas.Left="84" Canvas.Top="40" Width="82" Height="52" RenderTransformOrigin="0.5,0.5">
+                  <Canvas.RenderTransform>
+                    <RotateTransform Angle="6" />
+                  </Canvas.RenderTransform>
+                  <Rectangle Width="82" Height="52" RadiusX="9" RadiusY="9"
+                             Fill="{DynamicResource SurfaceElevatedBrush}"
+                             Stroke="{DynamicResource AccentLineBrush}" StrokeThickness="1.2" />
+                  <Rectangle Canvas.Left="13" Canvas.Top="14" Width="44" Height="4" RadiusX="2" RadiusY="2"
+                             Fill="{DynamicResource PrimaryTextBrush}" Opacity="0.55" />
+                  <Rectangle Canvas.Left="13" Canvas.Top="25" Width="56" Height="4" RadiusX="2" RadiusY="2"
+                             Fill="{DynamicResource PrimaryTextBrush}" Opacity="0.3" />
+                  <Rectangle Canvas.Left="13" Canvas.Top="36" Width="32" Height="4" RadiusX="2" RadiusY="2"
+                             Fill="{DynamicResource PrimaryTextBrush}" Opacity="0.3" />
+                </Canvas>
+
+                <!-- 收纳托盘：与图标同一意象，但这里是"半透明实体"而不是线框 -->
+                <Path Fill="{DynamicResource AccentFillBrush}" Stroke="{DynamicResource AccentLineBrush}"
+                      StrokeThickness="1.4" StrokeLineJoin="Round"
+                      Data="M 24,104 V 130 A 10,10 0 0 0 34,140 H 166 A 10,10 0 0 0 176,130 V 104 H 136 L 126,120 H 74 L 64,104 Z" />
+
+                <!-- 品牌记号：极简小鸟（主色，圆身 + 两侧翅膀弧线），下方衔一片点缀色的叶子 -->
+                <Canvas Canvas.Left="148" Canvas.Top="108" Width="44" Height="44">
+                  <Path Fill="{DynamicResource AccentBrush}" Opacity="0.92"
+                        Data="M 22,8 C 28.9,8 33.4,13.2 33,18.8 C 32.6,24.6 27.6,29.3 21.8,28.9 C 15.6,28.4 10.8,23.4 11.2,17.6 C 11.6,11.6 15.6,8 22,8 Z" />
+                  <!-- 花瓣用底色"刻"出来：深色方案是暗槽，浅色方案是亮槽，两边都成立 -->
+                  <Path Stroke="{DynamicResource SurfaceBrush}" StrokeThickness="1.5" Fill="Transparent" Opacity="0.45"
+                        StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                        Data="M 16.4,19.6 C 15,15.4 17.6,11.6 21.8,12.1 C 26,12.6 27.8,17.2 25,20 C 22.4,22.8 17.6,22.4 16.6,19.4 Z" />
+                  <Path Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.3" Fill="Transparent" Opacity="0.6"
+                        StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                        Data="M 11.8,15.4 C 9.6,16.8 9.2,20.2 11.2,22.4 M 32.2,14.8 C 34.4,16.8 34.2,20.8 31.8,22.6" />
+                  <!-- 点缀色只在这里露一次：绿（Frappe）/ 金（Dawn） -->
+                  <Path Fill="{DynamicResource HighlightBrush}" Opacity="0.9"
+                        Data="M 20.6,29 C 23,26.8 26.5,27 28.4,29.2 C 26.2,31.4 22.6,31.2 20.6,29 Z" />
+                  <Path Stroke="{DynamicResource HighlightBrush}" StrokeThickness="1.3" Fill="Transparent" Opacity="0.9"
+                        StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                        Data="M 20.8,29 C 20.6,31 19.8,32.6 18.6,33.8" />
+                </Canvas>
+              </Canvas>
+            </Viewbox>
+
+            <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" TextAlignment="Center"
+                       FontSize="12" LineHeight="20"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       Text="把文件、文件夹或文字拖进来。&#x0a;单击：文件夹打开 / 其余复制；双击打开；按住条目可拖到其他应用。" />
+          </StackPanel>
+
+          <ListBox x:Name="ItemList" Background="Transparent" BorderThickness="0"
+                   Margin="6,0" Padding="0"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   VirtualizingPanel.IsVirtualizing="True"
+                   PreviewMouseLeftButtonUp="OnItemClick"
+                   PreviewMouseLeftButtonDown="OnItemDragStart"
+                   PreviewMouseMove="OnItemDragMove"
+                   MouseDoubleClick="OnItemDoubleClick">
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem">
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Margin" Value="0,2" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                      <!-- 默认留 1px 透明描边，选中时才上色，避免勾选瞬间内容跳动 -->
+                      <Border x:Name="Bd" CornerRadius="8" Padding="7,5"
+                              BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
+                        <ContentPresenter />
+                      </Border>
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                          <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                          <!-- 选中态：描边 + 浅色底。普通模式的选中会在点击处理里立刻清掉（见 OnItemClick），
+                               所以这里不需要再判断是不是多选模式。 -->
+                          <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectedBrush}" />
+                          <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                        </Trigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Style>
+            </ListBox.ItemContainerStyle>
+
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid>
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="复制路径" Click="OnCopyPathClick" />
+                      <MenuItem Header="在文件夹中显示" Click="OnRevealClick">
+                        <MenuItem.Icon>
+                          <Path Style="{StaticResource IconBase}" Data="{StaticResource IconLocate}"
+                                Stroke="{DynamicResource MenuIconBrush}" />
+                        </MenuItem.Icon>
+                      </MenuItem>
+                      <MenuItem Header="{Binding PinActionLabel}" Click="OnTogglePinClick" />
+                      <Separator />
+                      <MenuItem Header="修复乱码名称" Click="OnRepairNameClick" />
+                      <MenuItem Header="重命名源文件为显示名" Click="OnRenameSourceClick" />
+                      <Separator />
+                      <MenuItem Header="删除条目" Click="OnDeleteClick">
+                        <MenuItem.Icon>
+                          <Path Style="{StaticResource IconBase}" Data="{StaticResource IconDelete}"
+                                Stroke="{DynamicResource MenuIconBrush}" />
+                        </MenuItem.Icon>
+                      </MenuItem>
+                    </ContextMenu>
+                  </Grid.ContextMenu>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+
+                  <!-- 条目类型图标：几何体按 Kind 切换，颜色统一走主色令牌 -->
+                  <Path Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center"
+                        Stroke="{DynamicResource AccentBrush}">
+                    <Path.Style>
+                      <Style TargetType="Path" BasedOn="{StaticResource IconBase}">
+                        <Setter Property="Data" Value="{StaticResource IconFile}" />
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding Kind}" Value="Folder">
+                            <Setter Property="Data" Value="{StaticResource IconFolder}" />
+                          </DataTrigger>
+                          <DataTrigger Binding="{Binding Kind}" Value="Text">
+                            <Setter Property="Data" Value="{StaticResource IconText}" />
+                          </DataTrigger>
+                          <DataTrigger Binding="{Binding IsImage}" Value="True">
+                            <Setter Property="Data" Value="{StaticResource IconImage}" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Path.Style>
+                  </Path>
+
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding DisplayName}" FontSize="13" TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Path}">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMissing}" Value="True">
+                              <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+                              <Setter Property="TextDecorations" Value="Strikethrough" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock FontSize="11" Margin="0,2,0,0"
+                               Foreground="{DynamicResource SecondaryTextBrush}">
+                      <Run Text="{Binding KindLabel, Mode=OneWay}" />
+                      <Run Text=" · " />
+                      <Run Text="{Binding RelativeTime, Mode=OneWay}" />
+                      <Run Text="{Binding StatusLabel, Mode=OneWay}" />
+                    </TextBlock>
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                              Visibility="{Binding IsMouseOver,
+                                          RelativeSource={RelativeSource AncestorType=ListBoxItem},
+                                          Converter={StaticResource BoolToVisibility}}">
+                    <Button Content="打开" Style="{StaticResource TextButton}" Click="OnOpenClick" />
+                    <Button Content="复制" Style="{StaticResource TextButton}" Click="OnCopyClick" />
+                    <Button Content="定位" Style="{StaticResource TextButton}" Click="OnRevealClick" />
+                  </StackPanel>
+
+                  <!-- 常显的钉住图标：不用右键，点一下即可切换 -->
+                  <Button Grid.Column="3" Click="OnTogglePinClick" Cursor="Hand" VerticalAlignment="Center"
+                          ToolTip="{Binding PinActionLabel}"
+                          AutomationProperties.Name="{Binding PinActionLabel}">
+                    <Button.Style>
+                      <Style TargetType="Button">
+                        <Setter Property="Template">
+                          <Setter.Value>
+                            <ControlTemplate TargetType="Button">
+                              <!-- 未钉住时压到 0.32，悬停或已钉住时提到 1 -->
+                              <Border x:Name="PinBd" CornerRadius="6" Background="Transparent" Padding="4,3"
+                                      Opacity="0.32">
+                                <Path x:Name="PinIcon">
+                                  <Path.Style>
+                                    <!-- 形状与描边都写在样式里而不是元素上：元素上的本地值会盖过触发器，
+                                         那样悬停换色、钉住换实心剪影都会失效。 -->
+                                    <Style TargetType="Path" BasedOn="{StaticResource IconBase}">
+                                      <Setter Property="Data" Value="{StaticResource IconPin}" />
+                                      <Setter Property="Stroke" Value="{DynamicResource SecondaryTextBrush}" />
+                                    </Style>
+                                  </Path.Style>
+                                </Path>
+                              </Border>
+                              <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                  <Setter TargetName="PinBd" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                  <Setter TargetName="PinBd" Property="Opacity" Value="1" />
+                                  <Setter TargetName="PinIcon" Property="Stroke" Value="{DynamicResource PrimaryTextBrush}" />
+                                </Trigger>
+                                <!-- 已钉住：换成实心剪影 + 主色，比单纯提亮更容易一眼分辨 -->
+                                <DataTrigger Binding="{Binding Pinned}" Value="True">
+                                  <Setter TargetName="PinBd" Property="Opacity" Value="1" />
+                                  <Setter TargetName="PinIcon" Property="Data" Value="{StaticResource IconPinSolid}" />
+                                  <Setter TargetName="PinIcon" Property="Stroke" Value="Transparent" />
+                                  <!-- 已钉住用点缀色：钉住是"状态标记"，不该和主色抢注意力 -->
+                                  <Setter TargetName="PinIcon" Property="Fill" Value="{DynamicResource HighlightBrush}" />
+                                </DataTrigger>
+                              </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                          </Setter.Value>
+                        </Setter>
+                      </Style>
+                    </Button.Style>
+                  </Button>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="12,6,12,10">
+          <TextBlock x:Name="FooterText" FontSize="11" VerticalAlignment="Center"
+                     Foreground="{DynamicResource SecondaryTextBrush}" />
+          <TextBlock x:Name="StatusText" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"
+                     Foreground="{DynamicResource HighlightBrush}" />
+        </Grid>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>

@@ -1,0 +1,35 @@
+# .NET 构建产物
+bin/
+obj/
+artifacts/
+publish/
+*.user
+*.suo
+.vs/
+
+# 安装包与可执行文件
+*.exe
+*.msi
+*.msix
+*.nupkg
+
+# 工具运行时产生的本地状态与缓存
+state.json
+state.json.tmp
+cache/
+*.log
+
+# 本地构建环境（dotnet 用户目录与包缓存，见 scripts/dev.ps1）
+.dotnet-home/
+.nuget/
+
+# 临时文件
+*.tmp
+~$*
+
+# 编辑器与系统
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini

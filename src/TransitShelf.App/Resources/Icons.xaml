@@ -1,0 +1,85 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    自绘矢量图标（第二层）：不依赖 Segoe MDL2 字形、不用 emoji、不引入图片文件。
+
+    画法与约束：
+    - 统一在 16×16 的坐标格里画，线宽 1.5，圆头端点圆角折点，几何体居中于 (8,8)。
+    - Stretch="None" + 显式 16×16，保证线宽永远是 1.5，不会因为图形大小不同被拉伸成粗细不一。
+      需要 20px 时用 Viewbox 包一层（线宽按比例放大到约 1.9），不要靠改 Stretch。
+    - 所有几何体限制在 1.25～14.75 之间，给 1.5 的描边留出半宽，避免贴边被裁。
+    - 颜色不写死在图标里：几何体只存形状，颜色由使用处绑语义令牌（AccentBrush / HighlightBrush / SecondaryTextBrush …），
+      这样深浅主题切换时图标自动跟着走。
+
+    emoji 与 Segoe MDL2 的问题（也就是要重画的原因）：📌 是彩色 emoji，字体、基线、配色都不受控，
+    和 Frappe 这套低饱和配色直接打架；Segoe MDL2 字形在不同 Windows 版本上会缺字或变形。
+  -->
+
+  <!-- 图标底座：描边式、圆头、16px -->
+  <Style x:Key="IconBase" TargetType="Path">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Stretch" Value="None" />
+    <Setter Property="StrokeThickness" Value="1.5" />
+    <Setter Property="StrokeStartLineCap" Value="Round" />
+    <Setter Property="StrokeEndLineCap" Value="Round" />
+    <Setter Property="StrokeLineJoin" Value="Round" />
+    <Setter Property="StrokeDashCap" Value="Round" />
+    <Setter Property="Fill" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- 收纳托盘：收起态胶囊把手、空状态插画共用同一意象 -->
+  <PathGeometry x:Key="IconShelf"
+                Figures="M 2.8,4.8 V 9.8 A 1.4,1.4 0 0 0 4.2,11.2 H 11.8 A 1.4,1.4 0 0 0 13.2,9.8 V 4.8 H 10.4 L 9.4,6.4 H 6.6 L 5.6,4.8 Z" />
+
+  <!--
+    品牌玫瑰：花朵剪影 + 一片叶子（填色），花瓣用另一条曲线"刻"出来。
+    刻槽不使用固定颜色，由使用处绑当前面板色，深浅主题都能成立（与空状态插画同一手法）。
+    同样画在 16×16 格子里；48px 以上能看出是一朵玫瑰，16px 会退化成花团剪影，属已知取舍。
+  -->
+  <PathGeometry x:Key="IconRoseBloom" FillRule="Nonzero"
+                Figures="M 7.7,2.4 A 4.9,4.9 0 1 1 7.7,12.2 A 4.9,4.9 0 1 1 7.7,2.4 Z M 10.9,12.1 C 11.7,11.1 12.9,10.8 13.7,11.0 C 13.3,12.2 12.2,13.1 10.9,13.3 Z" />
+  <PathGeometry x:Key="IconRoseSwirl"
+                Figures="M 8.0,4.7 A 3.1,3.1 0 1 1 4.7,7.8 M 7.5,6.5 A 1.5,1.5 0 1 1 6.1,7.9" />
+
+  <!-- 文件夹 -->
+  <PathGeometry x:Key="IconFolder"
+                Figures="M 2.4,3.9 H 6.1 L 7.5,5.4 H 13.6 V 12.1 H 2.4 Z" />
+
+  <!-- 文件（带折角） -->
+  <PathGeometry x:Key="IconFile"
+                Figures="M 3.4,2.6 H 9.4 L 12.6,5.8 V 13.4 H 3.4 Z M 9.4,2.6 V 5.8 H 12.6" />
+
+  <!-- 文字：字形 "T"，与文件/文件夹的轮廓区分开 -->
+  <PathGeometry x:Key="IconText"
+                Figures="M 3.4,4.4 H 12.6 M 8,4.4 V 11.6" />
+
+  <!-- 图片：画框 + 山线 + 小太阳（两个半圆弧拼成整圆） -->
+  <PathGeometry x:Key="IconImage"
+                Figures="M 2.8,4.2 H 13.2 V 11.8 H 2.8 Z M 2.9,10.2 L 6.3,7.1 L 9,9.6 L 10.9,8 L 13.1,10.1 M 5.9,5.65 A 0.85,0.85 0 1 1 5.9,7.35 A 0.85,0.85 0 1 1 5.9,5.65 Z" />
+
+  <!-- 钉住（未钉：描边） -->
+  <PathGeometry x:Key="IconPin"
+                Figures="M 6.6,2.8 H 9.4 M 7.2,2.8 V 6 L 5.5,8.2 H 10.5 L 8.8,6 V 2.8 M 8,8.2 V 12.6" />
+
+  <!-- 钉住（已钉：实心剪影，比"变色"更能一眼区分） -->
+  <PathGeometry x:Key="IconPinSolid"
+                Figures="M 6.4,2.4 H 9.6 V 3.4 H 9 V 6 L 10.9,8.4 H 5.1 L 7,6 V 3.4 H 6.4 Z M 7.3,9.1 H 8.7 V 13.2 H 7.3 Z" />
+
+  <!-- 定位：准星，对应"在资源管理器中定位" -->
+  <PathGeometry x:Key="IconLocate"
+                Figures="M 8,2.6 V 4.4 M 8,11.6 V 13.4 M 2.6,8 H 4.4 M 11.6,8 H 13.4 M 8,5.2 A 2.8,2.8 0 1 1 8,10.8 A 2.8,2.8 0 1 1 8,5.2 Z" />
+
+  <!-- 删除：垃圾桶 -->
+  <PathGeometry x:Key="IconDelete"
+                Figures="M 3.6,4.9 H 12.4 M 6.4,4.9 V 3.2 H 9.6 V 4.9 M 4.9,4.9 V 12.2 A 1,1 0 0 0 5.9,13.2 H 10.1 A 1,1 0 0 0 11.1,12.2 V 4.9 M 6.8,7.4 V 10.8 M 9.2,7.4 V 10.8" />
+
+  <!-- 品牌玫瑰标记：右下角极简玫瑰剪影，呼应空状态插画和 1024 图标 -->
+  <!-- 位于 16x16 格子右下角，直径约 5px，16px 缩放下仍可辨认为一朵小花 -->
+  <PathGeometry x:Key="IconBrandRose"
+                Figures="M 10.2,11.8 Q 10.2,10.6 11.4,10.6 Q 12.6,10.6 12.6,11.8 Q 12.6,13 11.4,13 Q 10.2,13 10.2,11.8 Z M 11,11.8 A 0.4,0.4 0 1 1 11.8,11.8 A 0.4,0.4 0 1 1 11,11.8 Z" />
+
+</ResourceDictionary>

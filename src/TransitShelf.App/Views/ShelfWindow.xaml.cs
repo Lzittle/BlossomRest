@@ -1,0 +1,1232 @@
+﻿using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Threading;
+using TransitShelf.App.Theme;
+using TransitShelf.Core;
+using TransitShelf.Core.Persistence;
+using TransitShelf.Core.Settings;
+using TransitShelf.Platform;
+using TransitShelf.Platform.Interop;
+
+namespace TransitShelf.App.Views;
+
+/// <summary>
+/// 中转站浮窗（demo 版）：收起胶囊 → 悬浮/点击/拖拽经过三种方式展开 → 条目列表。
+/// 窗口不抢焦点、不进 Alt+Tab（见技术框架设计 6.1）。
+/// </summary>
+public partial class ShelfWindow : Window
+{
+    private const double ExpandedWidth = 300;
+    private const double ExpandedHeight = 400;
+    private const double CollapsedSize = 64;
+    private const double ExpandedCornerRadius = 8;
+    private const double EdgeMargin = 12;
+
+    /// <summary>
+    /// 静止悬浮是否自动展开。**默认关闭**：它和"按住胶囊拖动"抢的是同一个动作——
+    /// 鼠标一移上去就开始计时，用户还没按下、面板就弹开了，于是拖动只能靠抢 300 ms，
+    /// 而且鼠标只是路过屏幕边缘也会被弹开。FR-02 里这条本来就标注为"（可选）"。
+    /// 展开仍有三条路：单击胶囊、全局快捷键、拖文件经过热区。
+    /// 将来要做设置项时，把这里换成设置值即可（见 PRD FR-70）。
+    /// </summary>
+    private const bool HoverExpandEnabled = false;
+    private static readonly TimeSpan ItemTimeToLive = TimeSpan.FromHours(24);
+
+    private readonly ShelfService _shelf = new() { Capacity = 9 };
+    private readonly ClipboardService _clipboard = new();
+    private readonly ShellService _shell = new();
+    private readonly DragOutService _dragOut = new();
+    private readonly ImageCacheService _images = new();
+    private readonly FileRenameService _renamer = new();
+    private readonly SourceWatcher _watcher = new();
+    private readonly ItemStore _store = new(AppPaths.StateFile);
+
+    private ShelfSettings _settings = new();
+
+    private readonly DispatcherTimer _expandTimer;
+    private readonly DispatcherTimer _collapseTimer;
+    private readonly DispatcherTimer _statusTimer;
+    private readonly DispatcherTimer _clearTimer;
+    private readonly DispatcherTimer _topmostTimer;
+    private readonly DispatcherTimer _saveTimer;
+    private const int HotKeyToggleId = 0x5453;   // "TS"
+    private const int HotKeyCollectId = 0x5454;  // "TT"
+    private static readonly uint HotKeyToggleKey = 0x44;  // D
+    private static readonly uint HotKeyCollectKey = 0x43; // C
+
+    private IntPtr _hwnd;
+    private bool _expanded;
+    private bool _clearArmed;
+    private bool _suppressClick;
+    private bool _draggingOut;
+    private Point? _dragOrigin;
+    private ShelfItem? _dragCandidate;
+
+    // 收起态胶囊的拖动状态。位置只记在本次运行里，重启后回到默认贴边位置（持久化见 PRD FR-05）。
+    private bool _pillPressed;
+    private bool _pillDragging;
+    private Point _pillPressPoint;
+    private double _pillPressLeft;
+    private double _pillPressTop;
+    private double? _customLeft;
+    private double? _customTop;
+
+    /// <summary>
+    /// 是否由"悬浮"触发展开。只有悬浮展开才在鼠标移出后自动收起；
+    /// 点击 / 快捷键 / 拖拽展开的面板必须保持，否则用户一移开鼠标就消失。
+    /// </summary>
+    private bool _openedByHover;
+
+    /// <summary>
+    /// 多选模式（FR-21）。用显式按钮切换而不是 Ctrl+点击：本窗口永不激活，
+    /// 无焦点窗口上的修饰键状态不可靠（见技术框架设计 6.10 / ADR D19）。
+    /// </summary>
+    private bool _multiSelect;
+
+    public ShelfWindow()
+    {
+        InitializeComponent();
+
+        // 悬浮 300 ms 展开；移出 1200 ms 收起（失焦不收起；主动展开的面板不自动收起）。
+        _expandTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        _expandTimer.Tick += (_, _) =>
+        {
+            _expandTimer.Stop();
+            ExpandFromHover();
+        };
+
+        _collapseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+        _collapseTimer.Tick += (_, _) =>
+        {
+            _collapseTimer.Stop();
+            if (!IsMouseOver && _openedByHover)
+            {
+                Collapse();
+            }
+        };
+
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _statusTimer.Tick += (_, _) =>
+        {
+            _statusTimer.Stop();
+            StatusText.Text = string.Empty;
+        };
+
+        // 清空需要二次点击确认，避免误触，同时避免弹出抢焦点的模态框。
+        _clearTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _clearTimer.Tick += (_, _) =>
+        {
+            _clearTimer.Stop();
+            _clearArmed = false;
+            UpdateClearButton();
+        };
+
+        // 置顶抢位心跳：本窗口不激活，任何别的置顶窗口都会永久盖住它（见 NativeMethods.ReassertTopmost）。
+        _topmostTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+        _topmostTimer.Tick += (_, _) => NativeMethods.ReassertTopmost(_hwnd);
+
+        // 变更后延迟落盘，避免连续操作时频繁写文件。
+        _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _saveTimer.Tick += (_, _) =>
+        {
+            _saveTimer.Stop();
+            SaveState();
+        };
+
+        _shelf.Changed += RefreshFooter;
+        _shelf.Changed += UpdateBatchBar;
+        _shelf.Changed += ScheduleSave;
+        ItemList.ItemsSource = _shelf.Items;
+        ItemList.SelectionChanged += (_, _) => UpdateBatchBar();
+
+        SourceInitialized += OnSourceInitialized;
+        Closed += OnClosed;
+        ApplyLayout();
+        RefreshFooter();
+        LoadState();
+    }
+
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        _hwnd = new WindowInteropHelper(this).Handle;
+        NativeMethods.ApplyNonActivatingToolWindow(_hwnd);
+        // 轮廓由 XAML 自绘（收起态正圆），系统再描边框/投影会在圆外面留下一个方块
+        NativeMethods.TryRemoveWindowFrame(_hwnd);
+
+        // 全局快捷键：Ctrl+Alt+D 唤出 / 收起（被占用时不影响其他功能）。
+        var modifiers = NativeMethods.ModControl | NativeMethods.ModAlt;
+        var toggleOk = NativeMethods.TryRegisterHotKey(_hwnd, HotKeyToggleId, modifiers, HotKeyToggleKey);
+        var collectOk = NativeMethods.TryRegisterHotKey(_hwnd, HotKeyCollectId, modifiers, HotKeyCollectKey);
+        if (HwndSource.FromHwnd(_hwnd) is { } source)
+        {
+            source.AddHook(WndProc);
+        }
+
+        _topmostTimer.Start();
+        Status(toggleOk && collectOk
+            ? $"{PaletteService.DisplayName(_settings.Palette)} · Ctrl+Alt+D 唤出 · Ctrl+Alt+C 收录"
+            : $"{PaletteService.DisplayName(_settings.Palette)} · 部分快捷键被其他软件占用");
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        _saveTimer.Stop();
+        SaveState();
+        _watcher.Stop();
+        _topmostTimer.Stop();
+        NativeMethods.UnregisterHotKeyById(_hwnd, HotKeyToggleId);
+        NativeMethods.UnregisterHotKeyById(_hwnd, HotKeyCollectId);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg != NativeMethods.WmHotKey)
+        {
+            return IntPtr.Zero;
+        }
+
+        switch (wParam.ToInt32())
+        {
+            case HotKeyToggleId:
+                TogglePanel();
+                handled = true;
+                break;
+
+            case HotKeyCollectId:
+                ShowPanel();
+                CollectFromClipboard();
+                handled = true;
+                break;
+        }
+
+        return IntPtr.Zero;
+    }
+
+    /// <summary>托盘菜单 / 快捷键调用：展开并抢回置顶。</summary>
+    public void ShowPanel()
+    {
+        _expandTimer.Stop();
+        _collapseTimer.Stop();
+        ExpandSticky();
+        NativeMethods.ReassertTopmost(_hwnd);
+    }
+
+    public void CollapsePanel() => Collapse();
+
+    public void ClearAll()
+    {
+        // 清空只清没钉住的：钉住的语义就是"别动它"（FR-43）。
+        var (removed, kept) = _shelf.ClearUnpinned();
+
+        if (removed == 0 && kept == 0)
+        {
+            Status("临时区已经是空的");
+        }
+        else if (kept > 0)
+        {
+            Status($"已清空 {removed} 项，保留 {kept} 项已钉住");
+        }
+        else
+        {
+            Status($"已清空 {removed} 项");
+        }
+    }
+
+    /// <summary>当前设置（托盘菜单用它初始化勾选状态）。</summary>
+    public ShelfSettings Settings => _settings;
+
+    /// <summary>开关：自动收录下载目录（FR-15）。</summary>
+    public void SetWatchDownloads(bool enabled)
+    {
+        _settings.WatchDownloads = enabled;
+        ApplyWatching();
+        ScheduleSave();
+    }
+
+    /// <summary>开关：自动收录微信接收目录（FR-15）。</summary>
+    public void SetWatchWeChat(bool enabled)
+    {
+        _settings.WatchWeChat = enabled;
+        ApplyWatching();
+        ScheduleSave();
+    }
+
+    /// <summary>
+    /// 切换配色（FR-73）。整套颜色都在 Palettes/ 的字典里，这里只换字典 + 记下选择。
+    /// 托盘菜单调用它，所以改完立刻落盘，重启后仍是这一套。
+    /// </summary>
+    public void ApplyPalette(string name)
+    {
+        var target = PaletteService.Normalize(name);
+        PaletteService.Apply(target);
+        _settings.Palette = target;
+        ScheduleSave();
+        Status($"配色：{PaletteService.DisplayName(target)}");
+    }
+
+    /// <summary>按当前设置重启目录监听。</summary>
+    private void ApplyWatching()
+    {
+        var targets = WatchTargets.Resolve(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            _settings);
+
+        _watcher.Restart(targets, OnWatchedFile, AppPaths.CacheDirectory);
+
+        Status(targets.Count == 0
+            ? "自动收录已关闭"
+            : $"正在监听 {targets.Count} 个目录，新文件会自动进架");
+    }
+
+    /// <summary>监听回调来自后台线程，切回界面线程再改集合。</summary>
+    private void OnWatchedFile(string path)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var item = _shelf.AddFile(path);
+            Status($"自动收录：{item.DisplayName}");
+        });
+    }
+
+    private void TogglePanel()
+    {
+        if (_expanded)
+        {
+            Collapse();
+        }
+        else
+        {
+            ShowPanel();
+        }
+    }
+
+    private void ApplyLayout()
+    {
+        var work = SystemParameters.WorkArea;
+
+        if (_expanded)
+        {
+            Width = ExpandedWidth;
+            Height = ExpandedHeight;
+            // 展开态用约等于系统圆角的圆角（透明窗口下系统不再代劳，见 XAML 顶部说明）
+            RootBorder.CornerRadius = new CornerRadius(ExpandedCornerRadius);
+            PillPanel.Visibility = Visibility.Collapsed;
+            PanelRoot.Visibility = Visibility.Visible;
+            Left = work.Right - ExpandedWidth - EdgeMargin;
+            Top = work.Bottom - ExpandedHeight - EdgeMargin;
+
+            // 胶囊被拖动过时，面板贴着胶囊展开，而不是跳回右下角
+            if (_customLeft is { } customLeft && _customTop is { } customTop)
+            {
+                Left = Math.Clamp(customLeft + CollapsedSize - ExpandedWidth, work.Left, work.Right - ExpandedWidth);
+                Top = Math.Clamp(customTop + CollapsedSize - ExpandedHeight, work.Top, work.Bottom - ExpandedHeight);
+            }
+        }
+        else
+        {
+            Width = CollapsedSize;
+            Height = CollapsedSize;
+            // 收起态 = 正圆：64×64 取半径 32
+            RootBorder.CornerRadius = new CornerRadius(CollapsedSize / 2);
+            PanelRoot.Visibility = Visibility.Collapsed;
+            PillPanel.Visibility = Visibility.Visible;
+            Left = work.Right - CollapsedSize - EdgeMargin;
+            Top = work.Bottom - CollapsedSize - 80;
+
+            if (_customLeft is { } customLeft2 && _customTop is { } customTop2)
+            {
+                Left = Math.Clamp(customLeft2, work.Left, work.Right - CollapsedSize);
+                Top = Math.Clamp(customTop2, work.Top, work.Bottom - CollapsedSize);
+            }
+        }
+    }
+
+    private void SetExpanded(bool expanded)
+    {
+        if (_expanded == expanded)
+        {
+            return;
+        }
+
+        _expanded = expanded;
+        ApplyLayout();
+        NativeMethods.ReassertTopmost(_hwnd);
+    }
+
+    /// <summary>主动展开（点击胶囊 / 快捷键 / 拖拽经过）：常驻，不因鼠标移开而收回。</summary>
+    private void ExpandSticky()
+    {
+        _openedByHover = false;
+        SetExpanded(true);
+    }
+
+    /// <summary>
+    /// 悬浮展开，只在收起状态生效。
+    /// 不能覆盖用户主动展开的常驻状态，否则"点开后再去别的软件"会被自动收起。
+    /// </summary>
+    private void ExpandFromHover()
+    {
+        if (_expanded)
+        {
+            return;
+        }
+
+        _openedByHover = true;
+        SetExpanded(true);
+    }
+
+    private void Collapse()
+    {
+        _openedByHover = false;
+        SetExpanded(false);
+    }
+
+    private void RefreshFooter()
+    {
+        var count = _shelf.Items.Count;
+        CountText.Text = count.ToString();
+        FooterText.Text = $"{count} / {_shelf.Capacity} 条";
+        EmptyState.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ItemList.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
+
+        // 空列表没有可勾选的对象，直接不给进多选（否则会出现一个没有任何内容可选的操作条）。
+        MultiSelectButton.IsEnabled = count > 0;
+    }
+
+    /// <summary>启动时恢复上次的条目：刷新失效状态、丢弃过期项、清理孤儿缓存（FR-41 / FR-45）。</summary>
+    private void LoadState()
+    {
+        try
+        {
+            AppPaths.EnsureCreated();
+
+            var (items, settings) = _store.LoadSnapshot();
+            _settings = settings;
+            _shelf.Capacity = settings.Capacity;
+
+            // 配色先于界面内容应用：设置文件里的名字可能已过期，Normalize 会收敛到已知方案。
+            PaletteService.Apply(settings.Palette);
+
+            if (items.Count > 0)
+            {
+                ShelfRetention.RefreshStates(items);
+                var kept = ShelfRetention.RemoveExpired(items, settings.TimeToLive, DateTimeOffset.Now);
+                var expired = items.Count - kept.Count;
+                var missing = kept.Count(item => item.IsMissing);
+
+                _shelf.LoadFrom(kept);
+
+                if (expired > 0 || missing > 0)
+                {
+                    Status($"恢复 {kept.Count} 条（清理 {expired} 条过期 / {missing} 条失效）");
+                }
+            }
+
+            AppPaths.CleanOrphanCache(_shelf.Items.Select(item => item.CachePath));
+            ApplyWatching();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status($"读取状态失败：{ex.Message}");
+        }
+    }
+
+    private void ScheduleSave()
+    {
+        _saveTimer.Stop();
+        _saveTimer.Start();
+    }
+
+    private void SaveState()
+    {
+        try
+        {
+            _store.Save(_shelf.Items, _settings);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Status($"保存状态失败：{ex.Message}");
+        }
+    }
+
+    private void Status(string message)
+    {
+        StatusText.Text = message;
+        _statusTimer.Stop();
+        _statusTimer.Start();
+    }
+
+    private void UpdateClearButton() => ClearButton.Content = _clearArmed ? "确认清空" : "清空";
+
+    // ── 展开 / 收起 ────────────────────────────────────────────────
+
+    private void OnWindowMouseEnter(object sender, MouseEventArgs e)
+    {
+        _collapseTimer.Stop();
+        // 悬浮展开默认关闭（见 HoverExpandEnabled）；按住胶囊是在拖动，更不该被它插进来
+        if (HoverExpandEnabled && !_expanded && !_pillPressed)
+        {
+            _expandTimer.Start();
+        }
+    }
+
+    private void OnWindowMouseLeave(object sender, MouseEventArgs e)
+    {
+        _expandTimer.Stop();
+        if (_expanded)
+        {
+            _collapseTimer.Start();
+        }
+    }
+
+    /// <summary>
+    /// 按住胶囊可以拖动。移动超过 4 个 DIP 才算拖动，否则会和"点击展开"抢手势。
+    /// </summary>
+    private void OnPillMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // 关键：先把悬浮展开的计时器掐掉，否则 300ms 后面板会展开、胶囊被隐藏，拖动随即中断
+        _expandTimer.Stop();
+        _pillPressed = true;
+        _pillDragging = false;
+        _pillPressPoint = PointToScreen(e.GetPosition(this));
+        _pillPressLeft = Left;
+        _pillPressTop = Top;
+        PillPanel.CaptureMouse();
+    }
+
+    private void OnPillMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_pillPressed || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        var now = PointToScreen(e.GetPosition(this));
+        var dx = now.X - _pillPressPoint.X;
+        var dy = now.Y - _pillPressPoint.Y;
+        if (!_pillDragging && Math.Abs(dx) + Math.Abs(dy) < 4)
+        {
+            return;
+        }
+
+        _pillDragging = true;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var work = SystemParameters.WorkArea;
+        Left = Math.Clamp(_pillPressLeft + dx / dpi.DpiScaleX, work.Left, work.Right - Width);
+        Top = Math.Clamp(_pillPressTop + dy / dpi.DpiScaleY, work.Top, work.Bottom - Height);
+    }
+
+    private void OnPillClick(object sender, MouseButtonEventArgs e)
+    {
+        if (PillPanel.IsMouseCaptured)
+        {
+            PillPanel.ReleaseMouseCapture();
+        }
+
+        _pillPressed = false;
+        if (_pillDragging)
+        {
+            // 拖过就不当点击，否则一松手就展开
+            _pillDragging = false;
+            _customLeft = Left;
+            _customTop = Top;
+            return;
+        }
+
+        _expandTimer.Stop();
+        ExpandSticky();
+    }
+
+    private void OnCollapseClick(object sender, RoutedEventArgs e) => Collapse();
+
+    private void OnWindowKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            Collapse();
+        }
+    }
+
+    // ── 拖入 ──────────────────────────────────────────────────────
+
+    private void OnDragEnter(object sender, DragEventArgs e)
+    {
+        // 自己拖出条目时忽略自身窗口的拖放事件，避免自我接收。
+        if (IgnoreSelfDrag(e))
+        {
+            return;
+        }
+
+        // 拖拽经过热区即展开：拖拽过程中用户腾不出手点按钮。
+        _expandTimer.Stop();
+        _collapseTimer.Stop();
+        ExpandSticky();
+        SetDropHighlight(true);
+        e.Effects = DragDropEffects.Copy;
+        e.Handled = true;
+    }
+
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        if (IgnoreSelfDrag(e))
+        {
+            return;
+        }
+
+        e.Effects = DragDropEffects.Copy;
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 拖入高亮：把面板描边换成主色。结束时不能回填"当初存下来的那支画刷"，
+    /// 而是重新挂回 StrokeBrush 资源引用——否则运行期换过配色后，描边会留着上一套的颜色。
+    /// </summary>
+    private void SetDropHighlight(bool active)
+    {
+        if (active)
+        {
+            RootBorder.BorderBrush = (Brush)FindResource("DropStrokeBrush");
+        }
+        else
+        {
+            RootBorder.SetResourceReference(Border.BorderBrushProperty, "StrokeBrush");
+        }
+    }
+
+    private void OnDragLeave(object sender, DragEventArgs e)
+    {
+        SetDropHighlight(false);
+    }
+
+    private void OnDrop(object sender, DragEventArgs e)
+    {
+        if (IgnoreSelfDrag(e))
+        {
+            return;
+        }
+
+        SetDropHighlight(false);
+
+        var added = 0;
+        if (e.Data.GetDataPresent(DataFormats.FileDrop)
+            && e.Data.GetData(DataFormats.FileDrop) is string[] paths)
+        {
+            foreach (var path in paths)
+            {
+                _shelf.AddFile(path);
+                added++;
+            }
+        }
+        else if (e.Data.GetDataPresent(DataFormats.UnicodeText)
+                 && e.Data.GetData(DataFormats.UnicodeText) is string text
+                 && !string.IsNullOrWhiteSpace(text))
+        {
+            _shelf.AddText(text);
+            added = 1;
+        }
+
+        Status(added > 0 ? $"已放入 {added} 项" : "这个格式暂不支持（demo 仅支持文件与文字）");
+        e.Handled = true;
+    }
+
+    private bool IgnoreSelfDrag(DragEventArgs e)
+    {
+        if (!_draggingOut)
+        {
+            return false;
+        }
+
+        e.Effects = DragDropEffects.None;
+        e.Handled = true;
+        return true;
+    }
+
+    // ── 条目操作 ──────────────────────────────────────────────────
+
+    private void OnItemClick(object sender, MouseButtonEventArgs e)
+    {
+        // 普通模式不留选中痕迹：鼠标按下时 ListBox 会顺手选中条目（多选模式正是靠这个状态），
+        // 处理完就清掉，免得卡片上留一圈选中描边。
+        if (!_multiSelect && ItemList.SelectedItem is not null)
+        {
+            ItemList.SelectedItem = null;
+        }
+
+        // 刚刚发生的是拖出，不应再触发单击动作。
+        if (_suppressClick)
+        {
+            _suppressClick = false;
+            return;
+        }
+
+        if (IsOnButton(e.OriginalSource))
+        {
+            return;
+        }
+
+        // 多选模式：勾选在鼠标按下时完成（见 OnItemDragStart），这里不再触发复制 / 打开。
+        if (_multiSelect)
+        {
+            return;
+        }
+
+        var item = ItemAt(e.OriginalSource);
+        if (item is null)
+        {
+            return;
+        }
+
+        e.Handled = true;
+
+        // 单击主动作：文件夹打开（无"复制内容"语义），其余复制。
+        if (item.Kind == ItemKind.Folder)
+        {
+            Open(item);
+        }
+        else
+        {
+            Copy(item);
+        }
+    }
+
+    private void OnItemDragStart(object sender, MouseButtonEventArgs e)
+    {
+        _suppressClick = false;
+
+        if (IsOnButton(e.OriginalSource))
+        {
+            _dragCandidate = null;
+            return;
+        }
+
+        // 多选模式：左键点条目 = 勾选 / 取消勾选，同时拦掉 ListBox 自带的单选与拖出。
+        if (_multiSelect)
+        {
+            _dragCandidate = null;
+            _dragOrigin = null;
+
+            if (ContainerAt(e.OriginalSource) is { } container)
+            {
+                container.IsSelected = !container.IsSelected;
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        _dragCandidate = ItemAt(e.OriginalSource);
+        _dragOrigin = _dragCandidate is null ? null : e.GetPosition(this);
+    }
+
+    private void OnItemDragMove(object sender, MouseEventArgs e)
+    {
+        if (_dragCandidate is null || _dragOrigin is null || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        var delta = e.GetPosition(this) - _dragOrigin.Value;
+        if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        var item = _dragCandidate;
+        _dragCandidate = null;
+        _dragOrigin = null;
+        _suppressClick = true;
+        _draggingOut = true;
+
+        try
+        {
+            var effect = _dragOut.StartDrag(this, item);
+            Status(effect == DragDropEffects.None ? "目标没有接收" : "已拖出");
+        }
+        catch (Exception ex)
+        {
+            Status($"拖出失败：{ex.Message}");
+        }
+        finally
+        {
+            _draggingOut = false;
+        }
+    }
+
+    private void OnItemDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (IsOnButton(e.OriginalSource))
+        {
+            return;
+        }
+
+        if (_multiSelect)
+        {
+            return;
+        }
+
+        if (ItemAt(e.OriginalSource) is { } item)
+        {
+            e.Handled = true;
+            Open(item);
+        }
+    }
+
+    private void OnOpenClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemOf(sender) is { } item)
+        {
+            Open(item);
+        }
+    }
+
+    private void OnCopyClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemOf(sender) is { } item)
+        {
+            Copy(item);
+        }
+    }
+
+    private void OnRevealClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemOf(sender) is { } item)
+        {
+            Reveal(item);
+        }
+    }
+
+    private void OnCopyPathClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemOf(sender) is not { } item)
+        {
+            return;
+        }
+
+        var value = item.Path ?? item.Text ?? item.DisplayName;
+        Status(_clipboard.CopyPath(value) ? "已复制路径" : "复制失败（剪贴板被占用）");
+    }
+
+    private void OnDeleteClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemOf(sender) is { } item)
+        {
+            _shelf.Remove(item);
+            Status("已移除条目，原始文件未受影响");
+        }
+    }
+
+    /// <summary>修复乱码显示名（FR-50）。只改架子里的名字，不动磁盘文件。</summary>
+    private void OnRepairNameClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemOf(sender) is not { } item)
+        {
+            return;
+        }
+
+        var suggestion = NameRepair.Suggest(item.DisplayName);
+        if (suggestion is null)
+        {
+            Status("名称看起来正常，没有找到可修复的乱码");
+            return;
+        }
+
+        item.DisplayName = suggestion.Repaired;
+        Status(item.Path is null
+            ? $"已修复显示名：{suggestion.Repaired}"
+            : "已修复显示名（如需同步文件名，用「重命名源文件为显示名」）");
+    }
+
+    /// <summary>把磁盘文件重命名为当前显示名（FR-40）。属于修改用户文件，必须先确认。</summary>
+    private void OnRenameSourceClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemOf(sender) is not { } item)
+        {
+            return;
+        }
+
+        if (item.Path is null)
+        {
+            Status("该条目没有对应的磁盘文件");
+            return;
+        }
+
+        if (!Confirm($"把磁盘文件重命名为：\n\n{item.DisplayName}\n\n原文件不会被删除，但位置会改变。继续吗？"))
+        {
+            return;
+        }
+
+        try
+        {
+            var newPath = _renamer.Rename(item.Path, item.DisplayName);
+            item.Path = newPath;
+            item.RefreshState();
+            Status($"已重命名源文件：{item.DisplayName}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            Status($"重命名失败：{ex.Message}");
+        }
+    }
+
+    /// <summary>需要用户确认的弹窗：临时允许窗口激活，避免对话框被挡住导致"看起来卡死"。</summary>
+    private bool Confirm(string message)
+    {
+        NativeMethods.SetActivatable(_hwnd, true);
+        NativeMethods.BringToForeground(_hwnd);
+
+        try
+        {
+            return MessageBox.Show(this, message, "中转站", MessageBoxButton.OKCancel, MessageBoxImage.Question)
+                == MessageBoxResult.OK;
+        }
+        finally
+        {
+            NativeMethods.SetActivatable(_hwnd, false);
+            NativeMethods.ReassertTopmost(_hwnd);
+        }
+    }
+
+    private void OnClearClick(object sender, RoutedEventArgs e)
+    {
+        if (_shelf.Items.Count == 0)
+        {
+            return;
+        }
+
+        if (!_clearArmed)
+        {
+            _clearArmed = true;
+            UpdateClearButton();
+            _clearTimer.Start();
+            Status("再点一次确认清空（钉住的会保留，原始文件不受影响）");
+            return;
+        }
+
+        _clearTimer.Stop();
+        _clearArmed = false;
+        UpdateClearButton();
+        ClearAll();
+    }
+
+    private void OnCollectClick(object sender, RoutedEventArgs e)
+    {
+        ShowPanel();
+        CollectFromClipboard();
+    }
+
+    private void OnAddFilesClick(object sender, RoutedEventArgs e) => AddFilesFromDialog();
+
+    // ── 多选与批量操作（FR-21）────────────────────────────────────
+
+    private void OnMultiSelectClick(object sender, RoutedEventArgs e) => SetMultiSelect(!_multiSelect);
+
+    private void OnBatchExitClick(object sender, RoutedEventArgs e) => SetMultiSelect(false);
+
+    private void SetMultiSelect(bool enabled)
+    {
+        _multiSelect = enabled;
+
+        if (enabled)
+        {
+            // 只有 Extended 才允许多选（见模板里的"选中不留下底色"：平时不依赖选中状态）。
+            ItemList.SelectionMode = SelectionMode.Extended;
+        }
+        else
+        {
+            LeaveMultiSelectMode();
+        }
+
+        HeaderActions.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
+        BatchBar.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        RefreshBatchBar();
+
+        Status(enabled ? "点条目勾选，再点「复制路径清单」" : "已退出多选");
+    }
+
+    /// <summary>
+    /// 退出多选：必须**先清空选中、再切回单选**。
+    /// 单选模式下的 SelectedItems 是只读集合，反过来做会抛 InvalidOperationException
+    /// （会让"完成"按钮看起来点了没反应，UIA 验收脚本抓到过）。
+    /// </summary>
+    private void LeaveMultiSelectMode()
+    {
+        if (ItemList.SelectionMode != SelectionMode.Single)
+        {
+            ItemList.SelectedItems.Clear();
+        }
+
+        ItemList.SelectionMode = SelectionMode.Single;
+    }
+
+    private void OnBatchSelectAllClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemList.SelectedItems.Count > 0 && ItemList.SelectedItems.Count == _shelf.Items.Count)
+        {
+            ItemList.SelectedItems.Clear();
+        }
+        else
+        {
+            ItemList.SelectAll();
+        }
+
+        UpdateBatchBar();
+    }
+
+    /// <summary>
+    /// 复制勾选项的绝对路径清单（FR-21）：换行分隔、按列表顺序。
+    /// 走纯文本而不是 CF_HDROP——目标是"贴进 AI 会话当引用地址"，不是"粘贴成附件"。
+    /// </summary>
+    private void OnBatchCopyPathsClick(object sender, RoutedEventArgs e)
+    {
+        var selected = _shelf.Items.Where(item => ItemList.SelectedItems.Contains(item)).ToList();
+        if (selected.Count == 0)
+        {
+            Status("先点条目勾选，再复制路径清单");
+            return;
+        }
+
+        var paths = PathListFormatter.Paths(selected);
+        if (paths.Count == 0)
+        {
+            Status("勾中的都是文字条目：路径清单只收文件、文件夹和图片");
+            return;
+        }
+
+        var skipped = selected.Count - paths.Count;
+        var copied = _clipboard.CopyText(PathListFormatter.Format(selected));
+
+        if (!copied)
+        {
+            Status("复制失败（剪贴板被占用）");
+            return;
+        }
+
+        Status(skipped == 0
+            ? $"已复制 {paths.Count} 条路径，去目标处 Ctrl+V"
+            : $"已复制 {paths.Count} 条路径，跳过 {skipped} 条文字条目");
+    }
+
+    private void UpdateBatchBar()
+    {
+        // 条目被清空或全部过期后没有可勾选的对象，自动退出，不留一个空的操作条。
+        if (_multiSelect && _shelf.Items.Count == 0)
+        {
+            ExitMultiSelectSilently();
+            return;
+        }
+
+        RefreshBatchBar();
+    }
+
+    /// <summary>静默退出多选：不写状态栏，避免盖掉"已清空 N 项"这类操作结果。</summary>
+    private void ExitMultiSelectSilently()
+    {
+        _multiSelect = false;
+        LeaveMultiSelectMode();
+        HeaderActions.Visibility = Visibility.Visible;
+        BatchBar.Visibility = Visibility.Collapsed;
+        RefreshBatchBar();
+    }
+
+    private void RefreshBatchBar()
+    {
+        var selected = ItemList.SelectedItems.Count;
+        BatchCountText.Text = $"已选 {selected} 项";
+        BatchSelectAllButton.Content =
+            selected > 0 && selected == _shelf.Items.Count ? "全不选" : "全选";
+    }
+
+    private void OnTogglePinClick(object sender, RoutedEventArgs e)
+    {
+        if (ItemOf(sender) is not { } item)
+        {
+            return;
+        }
+
+        _shelf.TogglePin(item);
+        Status(item.Pinned ? "已钉住：不会被自动清理" : "已取消钉住");
+    }
+
+    /// <summary>双击面板空白处收起（窗口不激活，Esc 收不到键盘事件，这里给一个鼠标替代）。</summary>
+    private void OnPanelPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount < 2)
+        {
+            return;
+        }
+
+        if (e.OriginalSource is DependencyObject source
+            && (FindAncestor<ListBoxItem>(source) is not null || FindAncestor<Button>(source) is not null))
+        {
+            return;
+        }
+
+        Collapse();
+    }
+
+    /// <summary>把剪贴板内容收进架子：文件 &gt; 文字 &gt; 图片（FR-13）。</summary>
+    public void CollectFromClipboard()
+    {
+        var payload = Diagnostics.Measure("读取剪贴板", _clipboard.Read);
+        var added = 0;
+
+        if (payload.Files.Count > 0)
+        {
+            foreach (var file in payload.Files)
+            {
+                _shelf.AddFile(file);
+                added++;
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(payload.Text))
+        {
+            _shelf.AddText(payload.Text);
+            added = 1;
+        }
+        else if (payload.Image is not null)
+        {
+            var cached = _images.SavePng(payload.Image);
+            if (cached is not null)
+            {
+                _shelf.AddCachedImage(cached, $"截图 {DateTime.Now:MMdd-HHmm}.png");
+                added = 1;
+            }
+        }
+
+        Status(added > 0 ? $"已收录 {added} 项" : "剪贴板里没有可收录的内容");
+    }
+
+    /// <summary>手动选择文件加入（FR-14）。</summary>
+    public void AddFilesFromDialog()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "添加到中转站",
+            Multiselect = true,
+            CheckFileExists = true,
+        };
+
+        // 弹系统对话框前临时允许激活并置于前台，否则对话框可能被别的窗口挡住，
+        // 而 ShowDialog 已经阻塞了本窗口，看起来就像卡死。
+        NativeMethods.SetActivatable(_hwnd, true);
+        NativeMethods.BringToForeground(_hwnd);
+
+        bool? result;
+        try
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            result = dialog.ShowDialog(this);
+            Diagnostics.LogSlow("打开文件选择框", watch.Elapsed);
+        }
+        finally
+        {
+            NativeMethods.SetActivatable(_hwnd, false);
+            NativeMethods.ReassertTopmost(_hwnd);
+        }
+
+        if (result != true)
+        {
+            return;
+        }
+
+        foreach (var file in dialog.FileNames)
+        {
+            _shelf.AddFile(file);
+        }
+
+        Status($"已添加 {dialog.FileNames.Length} 项");
+    }
+
+    private void Open(ShelfItem item)
+    {
+        if (item.Kind == ItemKind.Text)
+        {
+            Copy(item);
+            return;
+        }
+
+        try
+        {
+            _shell.Open(item.Path!);
+            Status(item.Kind == ItemKind.Folder ? "已打开文件夹" : "已用默认程序打开");
+        }
+        catch (Exception ex)
+        {
+            Status($"打开失败：{ex.Message}");
+        }
+    }
+
+    private void Copy(ShelfItem item)
+    {
+        var ok = item.Kind switch
+        {
+            ItemKind.Text => _clipboard.CopyText(item.Text ?? string.Empty),
+            _ => _clipboard.CopyFiles(new[] { item.Path! }),
+        };
+
+        Status(ok ? "已复制，去目标处 Ctrl+V" : "复制失败（剪贴板被占用）");
+    }
+
+    private void Reveal(ShelfItem item)
+    {
+        if (item.Path is null)
+        {
+            Copy(item);
+            return;
+        }
+
+        try
+        {
+            _shell.Reveal(item.Path);
+            Status("已在资源管理器中定位");
+        }
+        catch (Exception ex)
+        {
+            Status($"定位失败：{ex.Message}");
+        }
+    }
+
+    private ListBoxItem? ContainerAt(object? source) =>
+        source is DependencyObject dependencyObject
+        && ItemsControl.ContainerFromElement(ItemList, dependencyObject) is ListBoxItem container
+            ? container
+            : null;
+
+    private ShelfItem? ItemAt(object? source) => ContainerAt(source)?.DataContext as ShelfItem;
+
+    private static ShelfItem? ItemOf(object sender) => (sender as FrameworkElement)?.DataContext as ShelfItem;
+
+    private static bool IsOnButton(object? source) =>
+        source is DependencyObject dependencyObject && FindAncestor<Button>(dependencyObject) is not null;
+
+    /// <summary>
+    /// 沿可视化树向上找祖先；遇到 <see cref="System.Windows.Documents.Run"/> 这类
+    /// <see cref="FrameworkContentElement"/>（文字属于逻辑树、不是 Visual）时改用逻辑父节点。
+    /// 直接用 VisualTreeHelper 会抛 InvalidOperationException，导致点击文字时操作静默失效。
+    /// </summary>
+    private static T? FindAncestor<T>(DependencyObject node) where T : DependencyObject
+    {
+        for (DependencyObject? current = node; current is not null; current = GetParentSafe(current))
+        {
+            if (current is T match)
+            {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
+    private static DependencyObject? GetParentSafe(DependencyObject node) => node switch
+    {
+        Visual or System.Windows.Media.Media3D.Visual3D => VisualTreeHelper.GetParent(node),
+        FrameworkContentElement contentElement => contentElement.Parent,
+        _ => LogicalTreeHelper.GetParent(node),
+    };
+}

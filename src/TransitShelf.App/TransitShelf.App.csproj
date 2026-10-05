@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <!-- 托盘图标使用 WinForms 的 NotifyIcon（框架自带，非第三方依赖）。 -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>TransitShelf.App</RootNamespace>
+    <AssemblyName>TransitShelf</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- exe 自身的图标：任务栏、资源管理器、右键属性都读它。用带玫瑰的文件夹主视觉，8 个尺寸 -->
+    <ApplicationIcon>Assets\TransitShelf.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 同一份 ico 也作为 WPF 资源带上，托盘图标按 16px 那一帧取，缩放才不糊 -->
+    <Resource Include="Assets\TransitShelf.ico" />
+    <!-- 收起态胶囊里的品牌主视觉：与 exe 图标同一张玫瑰文件夹，透明底 -->
+    <Resource Include="Assets\brand-rose.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TransitShelf.Core\TransitShelf.Core.csproj" />
+    <ProjectReference Include="..\TransitShelf.Platform\TransitShelf.Platform.csproj" />
+  </ItemGroup>
+  <!--
+    同时启用 WPF 与 WinForms 时，隐式 using 会同时引入 System.Windows.Forms / System.Drawing，
+    与 WPF 的 MouseEventArgs、DragEventArgs、Brush 等类型冲突。
+    这里只移除隐式引用；需要 WinForms 类型的地方（App.xaml.cs 的托盘图标）使用完全限定名。
+  -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+</Project>

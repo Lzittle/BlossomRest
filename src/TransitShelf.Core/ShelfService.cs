@@ -62,7 +62,7 @@ public sealed class ShelfService
             && string.Equals(i.Path, full, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
         {
-            return existing;
+            return Revive(existing);
         }
 
         var isFolder = Directory.Exists(full);
@@ -70,7 +70,7 @@ public sealed class ShelfService
         {
             Id = Guid.NewGuid().ToString("n"),
             Kind = isFolder ? ItemKind.Folder : ItemKind.File,
-            DisplayName = System.IO.Path.GetFileName(full.TrimEnd('\\', '/')) is { Length: > 0 } name ? name : full,
+            DisplayName = UniqueName(System.IO.Path.GetFileName(full.TrimEnd('\\', '/')) is { Length: > 0 } name ? name : full),
             Path = full,
             CreatedAt = DateTimeOffset.Now,
         };
@@ -88,14 +88,16 @@ public sealed class ShelfService
         var existing = _inner.FirstOrDefault(i => i.Kind == ItemKind.Text && i.Text == trimmed);
         if (existing is not null)
         {
-            return existing;
+            return Revive(existing);
         }
 
         var item = new ShelfItem
         {
             Id = Guid.NewGuid().ToString("n"),
             Kind = ItemKind.Text,
-            DisplayName = trimmed.Length > 40 ? trimmed[..40] + "…" : trimmed,
+            // 长文本截前 40 字；不同内容完全可能截出同一个名字，所以必须过 UniqueName 消歧，
+            // 否则界面上会出现几个长得一模一样的条目，用户分不清谁是谁。
+            DisplayName = UniqueName(trimmed.Length > 40 ? trimmed[..40] + "…" : trimmed),
             Text = trimmed,
             CreatedAt = DateTimeOffset.Now,
         };
@@ -114,14 +116,14 @@ public sealed class ShelfService
             && string.Equals(i.CachePath, cachePath, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
         {
-            return existing;
+            return Revive(existing);
         }
 
         var item = new ShelfItem
         {
             Id = Guid.NewGuid().ToString("n"),
             Kind = ItemKind.File,
-            DisplayName = displayName,
+            DisplayName = UniqueName(displayName),
             CachePath = cachePath,
             CreatedAt = DateTimeOffset.Now,
         };
@@ -131,6 +133,67 @@ public sealed class ShelfService
         Trim();
         Changed?.Invoke();
         return item;
+    }
+
+    /// <summary>
+    /// 重复收录同一内容时的处理：把时间推到"刚刚"并按新时间重排。
+    ///
+    /// 早先的实现是静默返回旧条目，于是用户第二次收录同一段文字，看到的仍是第一次的时间、
+    /// 位置也没变——看上去像"没收录进去"。刷新时间既符合"最近用过"的直觉，也让卡片上的
+    /// 相对时间重新对得上。
+    ///
+    /// 只调 <see cref="Reorder"/>就够：Touch() 把它变成最新的未钉住项，Reorder 会自然把它提到
+    /// 该分组的第一位；钉住项仍按"钉住的在前"这条不变式留在最上面，不会被顶到未钉住项之上。
+    /// </summary>
+    private ShelfItem Revive(ShelfItem item)
+    {
+        item.Touch();
+        Reorder();
+        Changed?.Invoke();
+        return item;
+    }
+
+    /// <summary>
+    /// 显示名消歧：与现有条目重名时追加 " (2)"、" (3)"……
+    /// 同名条目在列表里无法区分，而它们的路径/内容其实不同——必须让名字可区分。
+    ///
+    /// 用忽略大小写的比较：Windows 上"报告.docx"与"报告.DOCX"是两个文件，
+    /// 但在列表里看起来一模一样，同样属于"名字一样"。
+    /// </summary>
+    private string UniqueName(string baseName)
+    {
+        if (!NameTaken(baseName))
+        {
+            return baseName;
+        }
+
+        for (var suffix = 2; suffix < 1000; suffix++)
+        {
+            var candidate = $"{baseName} ({suffix})";
+            if (!NameTaken(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return $"{baseName} ({Guid.NewGuid():n})";
+    }
+
+    private bool NameTaken(string name) =>
+        _inner.Any(i => string.Equals(i.DisplayName, name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// 让所有条目重算相对时间。
+    ///
+    /// 相对时间是只读计算属性，不会自己发通知（见 <see cref="ShelfItem.NotifyRelativeTime"/>），
+    /// 界面上的"刚刚 / N 分钟前"要靠外部定时踢才会走。调用频率由界面决定，条目量很小，开销可忽略。
+    /// </summary>
+    public void RefreshTimeLabels()
+    {
+        foreach (var item in _inner)
+        {
+            item.NotifyRelativeTime();
+        }
     }
 
     /// <summary>切换钉住状态。</summary>

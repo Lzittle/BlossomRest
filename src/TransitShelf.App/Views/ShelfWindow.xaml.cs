@@ -53,6 +53,7 @@ public partial class ShelfWindow : Window
     private readonly DispatcherTimer _clearTimer;
     private readonly DispatcherTimer _topmostTimer;
     private readonly DispatcherTimer _saveTimer;
+    private readonly DispatcherTimer _clockTimer;
     private const int HotKeyToggleId = 0x5453;   // "TS"
     private const int HotKeyCollectId = 0x5454;  // "TT"
     private static readonly uint HotKeyToggleKey = 0x44;  // D
@@ -65,6 +66,9 @@ public partial class ShelfWindow : Window
     private bool _draggingOut;
     private Point? _dragOrigin;
     private ShelfItem? _dragCandidate;
+
+    /// <summary>设置窗口（FR-72 / FR-74 / FR-75）。单实例，反复点托盘不重复开。</summary>
+    private Views.SettingsWindow? _settingsWindow;
 
     // 收起态胶囊的拖动状态。位置只记在本次运行里，重启后回到默认贴边位置（持久化见 PRD FR-05）。
     private bool _pillPressed;
@@ -137,6 +141,11 @@ public partial class ShelfWindow : Window
             SaveState();
         };
 
+        // 相对时间心跳。ShelfItem.RelativeTime 是只读计算属性，不会自己发通知，
+        // 不踢它就会永远停在"刚刚"（见 ShelfItem.NotifyRelativeTime）。
+        _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+        _clockTimer.Tick += (_, _) => _shelf.RefreshTimeLabels();
+
         _shelf.Changed += RefreshFooter;
         _shelf.Changed += UpdateBatchBar;
         _shelf.Changed += ScheduleSave;
@@ -148,6 +157,7 @@ public partial class ShelfWindow : Window
         ApplyLayout();
         RefreshFooter();
         LoadState();
+        _clockTimer.Start();
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -175,6 +185,16 @@ public partial class ShelfWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         _saveTimer.Stop();
+        _clockTimer.Stop();
+
+        // FR-74 退出清空：必须**先清后存**。
+        // 反过来的话会把刚清掉的条目写进 state.json，下次启动又原样回来——开关等于没开。
+        // 顺带只清未钉住的：钉住的语义是"别动它"，与手动清空一致（见 ClearAll）。
+        if (_settings.ClearOnExit)
+        {
+            _shelf.ClearUnpinned();
+        }
+
         SaveState();
         _watcher.Stop();
         _topmostTimer.Stop();
@@ -253,6 +273,99 @@ public partial class ShelfWindow : Window
         _settings.WatchWeChat = enabled;
         ApplyWatching();
         ScheduleSave();
+    }
+
+    /// <summary>
+    /// 改临时区上限（FR-72）。立即生效：<see cref="ShelfService.Capacity"/> 的 setter 内部会触发淘汰，
+    /// 因此要把淘汰条数回报给用户——这是不可逆操作，不能改完默默吞掉。
+    ///
+    /// 越界值在这里钳制而不是信任输入：设置窗口允许自由输入，但手输 0 会让
+    /// <see cref="ShelfService.Capacity"/> 兜底到 1，等于一句话清空整个临时区。
+    /// </summary>
+    public void SetCapacity(int value)
+    {
+        var target = Math.Clamp(value, ShelfSettings.CapacityMin, ShelfSettings.CapacityMax);
+        if (_settings.Capacity == target)
+        {
+            return;
+        }
+
+        var before = _shelf.Items.Count;
+        _settings.Capacity = target;
+        _shelf.Capacity = target;
+        ScheduleSave();
+
+        var evicted = before - _shelf.Items.Count;
+        var corrected = target != value ? $"（已修正为合法区间 {ShelfSettings.CapacityMin}～{ShelfSettings.CapacityMax}）" : string.Empty;
+        Status(evicted > 0
+            ? $"上限：{target} 项（已淘汰 {evicted} 条，源文件仍在原处）{corrected}"
+            : $"上限：{target} 项{corrected}");
+    }
+
+    /// <summary>
+    /// 改条目过期时长（FR-72）。
+    ///
+    /// 只影响**下次启动**的过期清理，运行中不扫描、不删除任何条目——
+    /// 沿用"退出不清理、只靠 TTL 与手动清空"这条既有约定（见技术框架设计 5.5）。
+    /// </summary>
+    public void SetTimeToLiveHours(int hours)
+    {
+        var target = Math.Clamp(hours, ShelfSettings.TimeToLiveHoursMin, ShelfSettings.TimeToLiveHoursMax);
+        if (_settings.TimeToLiveHours == target)
+        {
+            return;
+        }
+
+        _settings.TimeToLiveHours = target;
+        ScheduleSave();
+        Status($"过期时长：{target} 小时（下次启动生效）");
+    }
+
+    /// <summary>
+    /// 开关：退出时清空未钉住条目（FR-74，默认关闭）。
+    ///
+    /// 关闭时沿用既有约定"退出不清理、条目留到下次启动"；开启后每次退出都会丢弃现场，
+    /// 所以它必须**默认关闭**，且设置项里带一句风险说明让用户知情（红线 R4：删除条目绝不删用户文件，
+    /// 这里只清列表，源文件仍在）。
+    /// </summary>
+    public void SetClearOnExit(bool enabled)
+    {
+        _settings.ClearOnExit = enabled;
+        ScheduleSave();
+        Status(enabled ? "退出时将清空未钉住的条目（钉住的保留）" : "退出时不再清空，条目留到下次启动");
+    }
+
+    /// <summary>
+    /// 开关：启用工作区（FR-75，默认关闭）。
+    ///
+    /// 关闭时主面板只有临时区，与现有行为完全一致；开启后顶部出现「临时区 / 工作区」标签。
+    /// 本轮只落盘设置，工作区界面在下一阶段实现（见进度与待办第七节）。
+    /// </summary>
+    public void SetEnableWorkspace(bool enabled)
+    {
+        _settings.EnableWorkspace = enabled;
+        ScheduleSave();
+        Status(enabled ? "已启用工作区" : "已关闭工作区，回到单临时区模式");
+    }
+
+    /// <summary>打开设置窗口（FR-72 / FR-74 / FR-75）。托盘菜单「设置…」调用它。</summary>
+    public void ShowSettings()
+    {
+        // 单实例：反复点托盘不该开出一堆设置窗口
+        if (_settingsWindow is { } existing && existing.IsLoaded)
+        {
+            if (existing.WindowState == WindowState.Minimized)
+            {
+                existing.WindowState = WindowState.Normal;
+            }
+
+            existing.Activate();
+            return;
+        }
+
+        _settingsWindow = new Views.SettingsWindow(this);
+        _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        _settingsWindow.Show();
     }
 
     /// <summary>
@@ -809,7 +922,7 @@ public partial class ShelfWindow : Window
         }
 
         var value = item.Path ?? item.Text ?? item.DisplayName;
-        Status(_clipboard.CopyPath(value) ? "已复制路径" : "复制失败（剪贴板被占用）");
+        Status(_clipboard.CopyPath(value) ? "已复制路径" : "复制失败，请重试（剪贴板可能被其他程序占用）");
     }
 
     private void OnDeleteClick(object sender, RoutedEventArgs e)
@@ -1003,7 +1116,7 @@ public partial class ShelfWindow : Window
 
         if (!copied)
         {
-            Status("复制失败（剪贴板被占用）");
+        Status("复制失败，请重试（剪贴板可能被其他程序占用）");
             return;
         }
 
@@ -1094,7 +1207,9 @@ public partial class ShelfWindow : Window
             var cached = _images.SavePng(payload.Image);
             if (cached is not null)
             {
-                _shelf.AddCachedImage(cached, $"截图 {DateTime.Now:MMdd-HHmm}.png");
+                // 名字精确到秒：只到分钟的话，一分钟内连截两张图会得到完全一样的名字，
+                // 列表里两行长得一模一样。跨天也靠日期段区分。
+                _shelf.AddCachedImage(cached, $"截图 {DateTime.Now:MMdd-HHmmss}.png");
                 added = 1;
             }
         }
@@ -1170,7 +1285,8 @@ public partial class ShelfWindow : Window
             _ => _clipboard.CopyFiles(new[] { item.Path! }),
         };
 
-        Status(ok ? "已复制，去目标处 Ctrl+V" : "复制失败（剪贴板被占用）");
+        // 失败时不再只说"被占用"：写入被拒绝的原因不止占用一种（见技术框架设计 6.5 与 error.log）
+        Status(ok ? "已复制，去目标处 Ctrl+V" : "复制失败，请重试（剪贴板可能被其他程序占用）");
     }
 
     private void Reveal(ShelfItem item)

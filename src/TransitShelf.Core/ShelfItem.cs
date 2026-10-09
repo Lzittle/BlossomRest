@@ -12,6 +12,7 @@ public sealed class ShelfItem : INotifyPropertyChanged
     private bool _pinned;
     private ItemState _state = ItemState.Ok;
     private string? _path;
+    private DateTimeOffset _createdAt;
 
     public required string Id { get; init; }
 
@@ -52,7 +53,28 @@ public sealed class ShelfItem : INotifyPropertyChanged
     /// <summary>文字条目的内容；文件类条目为 null。</summary>
     public string? Text { get; init; }
 
-    public required DateTimeOffset CreatedAt { get; init; }
+    /// <summary>
+    /// 收录时刻。**不是 init**：重复收录同一内容时要把它刷新成"刚刚"（见 ShelfService.AddText），
+    /// 所以带 setter；但仍 required——漏给时间会退化成 0001 年，界面直接显示几万天前。
+    /// </summary>
+    public required DateTimeOffset CreatedAt
+    {
+        get => _createdAt;
+        set
+        {
+            if (_createdAt == value)
+            {
+                return;
+            }
+
+            _createdAt = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(RelativeTime));
+        }
+    }
+
+    /// <summary>重新收录：把时间推到当前，并让界面上的相对时间立刻重算。</summary>
+    public void Touch() => CreatedAt = DateTimeOffset.Now;
 
     /// <summary>钉住后不参与上限淘汰与过期清理。</summary>
     public bool Pinned
@@ -146,4 +168,13 @@ public sealed class ShelfItem : INotifyPropertyChanged
             return $"{(int)span.TotalDays} 天前";
         }
     }
+
+    /// <summary>
+    /// 通知界面重算 <see cref="RelativeTime"/>。
+    ///
+    /// 这个值是**只读计算属性**：内容随 <see cref="DateTimeOffset.Now"/> 变，但没有任何属性本身的变化，
+    /// 所以 WPF 的 OneWay 绑定只在第一次取值时就定住了，之后永远显示同一个词——
+    /// 表现为"放了一小时还是刚刚"。必须由外部（ShelfService 的定时刷新）显式踢一脚。
+    /// </summary>
+    public void NotifyRelativeTime() => OnPropertyChanged(nameof(RelativeTime));
 }

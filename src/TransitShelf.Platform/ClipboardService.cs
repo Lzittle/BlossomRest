@@ -1,7 +1,6 @@
-using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using TransitShelf.Platform.Interop;
 
 namespace TransitShelf.Platform;
 
@@ -19,11 +18,47 @@ public sealed class ClipboardService
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(30);
 
     /// <summary>复制文件路径列表（CF_HDROP）。粘贴到资源管理器、微信、AI 会话均可用。</summary>
-    public bool CopyFiles(IReadOnlyList<string> paths) =>
-        TrySet(() => Clipboard.SetDataObject(new DataObject(DataFormats.FileDrop, paths.ToArray()), true));
+    public bool CopyFiles(IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0)
+        {
+            return false;
+        }
+
+        var files = paths.ToArray();
+
+        // 主通道：WPF 的 DataObject，带 OLE 包装，目标应用兼容性最好。
+        if (TrySet(() => Clipboard.SetDataObject(new DataObject(DataFormats.FileDrop, files), true), out var failure))
+        {
+            return true;
+        }
+
+        // 后备通道：绕开 OLE 直接用 Win32 写 CF_HDROP（见 NativeMethods.TrySetClipboardFileDrop）。
+        if (NativeMethods.TrySetClipboardFileDrop(files))
+        {
+            return true;
+        }
+
+        Diagnostics.LogFailure("复制文件到剪贴板", failure);
+        return false;
+    }
 
     /// <summary>复制纯文本。</summary>
-    public bool CopyText(string text) => TrySet(() => Clipboard.SetText(text));
+    public bool CopyText(string text)
+    {
+        if (TrySet(() => Clipboard.SetText(text), out var failure))
+        {
+            return true;
+        }
+
+        if (NativeMethods.TrySetClipboardText(text))
+        {
+            return true;
+        }
+
+        Diagnostics.LogFailure("复制文字到剪贴板", failure);
+        return false;
+    }
 
     /// <summary>复制单条路径文本（用于"复制路径"）。</summary>
     public bool CopyPath(string path) => CopyText(path);
@@ -68,13 +103,10 @@ public sealed class ClipboardService
 
                 return ClipboardPayload.Empty;
             }
-            catch (COMException)
+            catch (Exception)
             {
-                // 剪贴板被占用，重试
-            }
-            catch (ExternalException)
-            {
-                // 同上
+                // 剪贴板是跨进程共享资源，失败方式不止一种（被占用、格式不支持、OLE 拒绝……），
+                // 这里一律吞掉后重试，绝不让读剪贴板把常驻程序带崩。
             }
 
             if (attempt < MaxAttempts - 1)
@@ -86,8 +118,19 @@ public sealed class ClipboardService
         return ClipboardPayload.Empty;
     }
 
-    private static bool TrySet(Action action)
+    /// <summary>
+    /// 执行一次剪贴板写入，失败重试。
+    ///
+    /// **必须捕获一切异常**：剪贴板写入的失败方式不止 COMException 一种。实机遇到过
+    /// OleSetClipboard 返回 E_NOTIMPL、被 ThrowExceptionForHR 映射成 NotImplementedException 的情况，
+    /// 它既不是 COMException 也不是 ExternalException，从这两个 catch 旁边溜了出去，
+    /// 一路逃到 App 的全局兜底被吞掉——用户看到的现象是"点复制没反应"，连失败提示都没有。
+    /// 见技术框架设计 6.5「重试耗尽后必须返回失败，不能抛出异常」。
+    /// </summary>
+    private static bool TrySet(Action action, out Exception? lastFailure)
     {
+        lastFailure = null;
+
         for (var attempt = 0; attempt < MaxAttempts; attempt++)
         {
             try
@@ -95,13 +138,10 @@ public sealed class ClipboardService
                 action();
                 return true;
             }
-            catch (COMException)
+            catch (Exception ex)
             {
-                // 剪贴板被其他进程占用（CLIPBRD_E_CANT_OPEN 等），重试后放弃。
-            }
-            catch (ExternalException)
-            {
-                // 同上；这里绝不能让异常逃出去，否则整个常驻程序会退出。
+                // 记录最后一次失败原因交给上层留痕；重试后仍失败就返回 false。
+                lastFailure = ex;
             }
 
             if (attempt < MaxAttempts - 1)

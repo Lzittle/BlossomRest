@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace TransitShelf.Platform.Interop;
 
@@ -274,6 +275,160 @@ public static class NativeMethods
         if (hwnd != IntPtr.Zero)
         {
             SetForegroundWindow(hwnd);
+        }
+    }
+
+    // ── 剪贴板直写（后备通道，见 ClipboardService 与技术框架设计 6.5）──────────────
+    // 为什么需要：WPF 的 Clipboard.SetDataObject 走的是 OLE（OleSetClipboard + OleFlushClipboard），
+    // 实机遇到过它返回 E_NOTIMPL、被映射成 NotImplementedException 的情况，此时只有绕开 OLE
+    // 才写得进去。CF_HDROP 的内存块交给系统持有，所以程序退出后仍可粘贴。
+
+    private const uint CF_UNICODETEXT = 13;    // WinUser.h：以 NUL 结尾的 UTF-16 文本
+    private const uint CF_HDROP = 15;          // WinUser.h：DROPFILES 头 + 双 NUL 结尾的文件列表
+    private const uint GMEM_MOVEABLE = 0x0002; // winbase.h：GlobalAlloc 标志，剪贴板要求可移动内存块
+    private const int ClipboardAttempts = 4;   // 剪贴板可能被别的进程打开，重试几次
+    private const int ClipboardRetryDelayMs = 30;
+
+    /// <summary>DROPFILES（shlobj_core.h）：CF_HDROP 的头部，紧跟其后的是文件列表。</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DropFiles
+    {
+        public uint FileListOffset; // 文件列表相对本结构起点的字节偏移
+        public int PointX;
+        public int PointY;
+        public int NonClientArea;
+        public int Wide;            // 1 = 文件列表是宽字符（UTF-16）
+    }
+
+    // OpenClipboard / EmptyClipboard / SetClipboardData / CloseClipboard（user32.dll）：剪贴板直写。
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool OpenClipboard(IntPtr newOwner);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool EmptyClipboard();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetClipboardData(uint format, IntPtr memory);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool CloseClipboard();
+
+    // GlobalAlloc / GlobalLock / GlobalUnlock / GlobalFree（kernel32.dll）：剪贴板要求可移动内存块。
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalLock(IntPtr memory);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GlobalUnlock(IntPtr memory);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalFree(IntPtr memory);
+
+    /// <summary>把绝对路径列表按 CF_HDROP 直接写入剪贴板；失败返回 false，不抛异常。</summary>
+    public static bool TrySetClipboardFileDrop(IReadOnlyList<string> paths) =>
+        paths.Count > 0 && TrySetClipboardData(CF_HDROP, BuildFileDropBuffer(paths));
+
+    /// <summary>把纯文本按 CF_UNICODETEXT 直接写入剪贴板；失败返回 false，不抛异常。</summary>
+    public static bool TrySetClipboardText(string text) =>
+        TrySetClipboardData(CF_UNICODETEXT, Encoding.Unicode.GetBytes(text + "\0"));
+
+    /// <summary>
+    /// 组装 CF_HDROP 的内存块：DROPFILES 头 + 每条路径各带一个 NUL + 末尾再补一个 NUL。
+    /// 头固定 20 字节（五个字段都是 4 字节），32 位与 64 位一致。
+    /// </summary>
+    internal static byte[] BuildFileDropBuffer(IReadOnlyList<string> paths)
+    {
+        var header = Marshal.SizeOf<DropFiles>();
+        var list = new StringBuilder();
+        foreach (var path in paths)
+        {
+            list.Append(path).Append('\0');
+        }
+
+        list.Append('\0');
+
+        var payload = Encoding.Unicode.GetBytes(list.ToString());
+        var buffer = new byte[header + payload.Length];
+        var dropFiles = new DropFiles { FileListOffset = (uint)header, Wide = 1 };
+        MemoryMarshal.Write(buffer.AsSpan(), in dropFiles);
+        payload.CopyTo(buffer.AsSpan(header));
+        return buffer;
+    }
+
+    private static bool TrySetClipboardData(uint format, byte[] payload)
+    {
+        for (var attempt = 0; attempt < ClipboardAttempts; attempt++)
+        {
+            if (TryWriteClipboardData(format, payload))
+            {
+                return true;
+            }
+
+            if (attempt < ClipboardAttempts - 1)
+            {
+                Thread.Sleep(ClipboardRetryDelayMs);
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>单次写入尝试：分配全局内存 → 写入内容 → 打开剪贴板 → 清空 → 交付所有权。</summary>
+    private static bool TryWriteClipboardData(uint format, byte[] payload)
+    {
+        var memory = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)payload.Length);
+        if (memory == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            var target = GlobalLock(memory);
+            if (target == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            try
+            {
+                Marshal.Copy(payload, 0, target, payload.Length);
+            }
+            finally
+            {
+                _ = GlobalUnlock(memory);
+            }
+
+            if (!OpenClipboard(IntPtr.Zero))
+            {
+                return false; // 被别的进程占用，交给上层重试
+            }
+
+            try
+            {
+                EmptyClipboard();
+                if (SetClipboardData(format, memory) == IntPtr.Zero)
+                {
+                    return false;
+                }
+
+                // 成功后内存块归系统所有，绝不能再 GlobalFree。
+                memory = IntPtr.Zero;
+                return true;
+            }
+            finally
+            {
+                _ = CloseClipboard();
+            }
+        }
+        finally
+        {
+            if (memory != IntPtr.Zero)
+            {
+                _ = GlobalFree(memory);
+            }
         }
     }
 }

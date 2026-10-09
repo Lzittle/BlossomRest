@@ -3,6 +3,7 @@ using System.Threading;
 using System.Windows;
 using TransitShelf.App.Theme;
 using TransitShelf.App.Views;
+using TransitShelf.Core.Settings;
 using TransitShelf.Platform;
 
 namespace TransitShelf.App;
@@ -82,6 +83,11 @@ public partial class App : Application
 
         menu.Items.Add(watchDownloads);
         menu.Items.Add(watchWeChat);
+        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+
+        // 设置：清理策略、退出清空、工作区开关都收进独立窗口（FR-72 / FR-74 / FR-75）。
+        // 不做成多层子菜单——设置项会随版本增长，子菜单藏得越深越没人找得到。
+        menu.Items.Add("设置…", null, (_, _) => window.ShowSettings());
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
         // 配色（FR-73）：一条"切换到 X"的条目，直接写出目标方案名——

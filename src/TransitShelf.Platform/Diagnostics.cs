@@ -43,4 +43,24 @@ public static class Diagnostics
             LogSlow(operation, watch.Elapsed);
         }
     }
+
+    /// <summary>
+    /// 失败日志：操作彻底失败时留一条可查的记录（例如剪贴板写入被系统或别的进程拒绝）。
+    /// 与 App 层的未处理异常日志写在同一个 error.log，排查时只看一个文件。
+    /// </summary>
+    public static void LogFailure(string operation, Exception? exception)
+    {
+        try
+        {
+            AppPaths.EnsureCreated();
+            var detail = exception is null ? "（没有可用的异常信息）" : exception.ToString();
+            File.AppendAllText(
+                Path.Combine(AppPaths.Root, "error.log"),
+                $"[{DateTimeOffset.Now:O}] {operation}失败：{detail}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 记录失败不能再影响功能
+        }
+    }
 }

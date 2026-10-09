@@ -8,6 +8,8 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- 平台层是 UseWPF 工程（剪贴板走 WPF 的 Clipboard / DataObject） -->
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,10 +21,13 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <!-- WPF 工程会从隐式引用里去掉 System.IO，既有测试大量使用 Path / File / Directory，这里补回来 -->
+    <Using Include="System.IO" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TransitShelf.Core\TransitShelf.Core.csproj" />
+    <ProjectReference Include="..\TransitShelf.Platform\TransitShelf.Platform.csproj" />
   </ItemGroup>
 
 </Project>

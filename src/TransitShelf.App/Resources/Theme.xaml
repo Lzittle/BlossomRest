@@ -38,4 +38,226 @@
     </Setter>
   </Style>
 
+  <!--
+    开关（设置窗口用，FR-72 / FR-74 / FR-75）。
+    必须自绘：WPF 默认 CheckBox 是一个灰底方框，在深色面板上非常刺眼（8.2「控件自绘」）。
+    外观沿用面板语言——2 px 线宽的胶囊轨道 + 14 px 实心圆钮，尺寸与列表圆角一致。
+  -->
+  <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <!-- 命中区比外观大一圈：28×16 的轨道只有手指/鼠标不太好点 -->
+          <Border Background="Transparent" Padding="6,4">
+            <Grid Width="28" Height="16">
+              <Border x:Name="Track" CornerRadius="8"
+                      Background="{DynamicResource SurfaceElevatedBrush}"
+                      BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1.5" />
+              <Ellipse x:Name="Knob" Width="10" Height="10" HorizontalAlignment="Left"
+                       Margin="3,0,0,0" Fill="{DynamicResource SecondaryTextBrush}" />
+            </Grid>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentFillBrush}" />
+              <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+              <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource AccentBrush}" />
+              <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+              <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0" />
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource PrimaryTextBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.35" />
+              <Setter Property="Cursor" Value="Arrow" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!--
+    数字输入框（设置窗口的容量与过期时长用）。
+    同样自绘：默认 TextBox 是白底黑框，跟配色字典完全不是一套。
+    内容区用一个只读样式的 ScrollViewer 承载光标（TextBox 的 PART_ContentHost）。
+  -->
+  <Style x:Key="NumberBox" TargetType="TextBox">
+    <Setter Property="Width" Value="72" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TextBox">
+          <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                          VerticalAlignment="Center" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+              <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource HoverBrush}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!--
+    列表滚动条自绘（技术框架设计 8.8）。
+
+    要解决的：条目列表右侧那条 WPF 默认 ScrollBar 是灰色轨道 + 两端箭头 + 宽 17 px，
+    与面板的配色、圆角、1.5 px 线宽不是一套语言，实体上很显眼。
+
+    三条关键取舍：
+
+    ① **宽度恒为 8 px，滑块在其中缩放**（静止 4 px → 悬停 8 px）。
+       如果让宽度随显隐变化，条目文字会横向跳动——这比一条灰杠更糟。
+    ② **去掉箭头与翻页按钮**（RepeatButton 不渲染内容）。窄条里塞两个箭头只会挤占滑块空间。
+       滚轮与拖拽仍然可用，键盘 PageUp/PageDown 由 ScrollViewer 原生提供。
+    ③ **显隐用 Opacity 过渡而不是改宽度/可见性**：淡入淡出不触发布局，
+       也不会让列表在动画期间反复重排。
+
+    颜色只绑语义令牌，两套配色自动跟随（见 8.2），不写死、不引第三方控件库（红线 R9）。
+  -->
+  <Style TargetType="ScrollBar">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Width" Value="8" />
+    <Setter Property="MinWidth" Value="8" />
+    <!--
+      注意这里**不能**给 ScrollBar 设 Opacity=0：
+      Opacity=0 的元素不参与命中测试，轨道就没法悬停、也没法拖动了。
+      显隐由 Thumb 模板里的滑块负责（见下），轨道始终透明但可命中。
+    -->
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ScrollBar">
+          <Grid x:Name="Root" Background="Transparent" SnapsToDevicePixels="True">
+            <!--
+              轨道：不画底色，只有滑块（8.8「轨道不画底色」）。
+
+              淡入淡出打的是 Thumb（见下方触发器）而不是 Root：Opacity=0 的元素**不参与命中测试**，
+              若把整个 Grid 淡出，轨道就没法拖、也没法悬停唤回了——那是自相矛盾的。
+            -->
+            <Track x:Name="PART_Track" IsDirectionReversed="True">
+              <!--
+                轨道与两个翻页按钮都铺满8 px（RepeatButton 透明但**可命中**）：
+                滑块静止时只有 4 px 宽，若轨道不铺满，用户想拖时只有 4 px 高的可命中区，很难点中。
+                Opacity=0 让它不显示，但命中测试仍生效。
+              -->
+              <Track.DecreaseRepeatButton>
+                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False" />
+              </Track.DecreaseRepeatButton>
+              <Track.Thumb>
+                <Thumb x:Name="Thumb">
+                  <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                      <Border x:Name="Bd" CornerRadius="2" Width="4" HorizontalAlignment="Center"
+                              Opacity="0" Background="{DynamicResource StrokeBrush}" />
+                      <ControlTemplate.Triggers>
+                        <!--
+                          显隐放在**Thumb 模板内**，不能放到 ScrollBar 的 ControlTemplate 里：
+                          Bd 位于嵌套模板中，外层触发器无法用 TargetName 引用它
+                          （TargetName 只在同层模板内有效），会把运行时变成"设了但没反应"。
+
+                          打Bd（滑块）而不是整个 Root（轨道）：Opacity=0 的元素**不参与命中测试**，
+                          把轨道淡出它就没法拖、也没法悬停唤回了，自相矛盾。
+                          现在是"轨道始终可命中、滑块负责显隐"——看不见但能拖。
+
+                          IsMouseOver 用 RelativeSource 向上找到 ScrollBar 自己：
+                          Thumb 上只有鼠标压在滑块上时才为 true，那样就成了"滑块附近才显形"，
+                          而 8.8 要求的是"鼠标进入列表右侧区域就显形"。
+                          IsEnabled / IsMouseCaptureWithin 同理（ScrollViewer 禁用时置 false）。
+                        -->
+                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ScrollBar}}" Value="True">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="Bd"
+                                                 Storyboard.TargetProperty="Opacity"
+                                                 To="1" Duration="0:0:0.12" />
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                          <DataTrigger.ExitActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="Bd"
+                                                 Storyboard.TargetProperty="Opacity"
+                                                 To="0" Duration="0:0:0.2" />
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.ExitActions>
+                        </DataTrigger>
+
+                        <Trigger Property="IsMouseOver" Value="True">
+                          <Setter TargetName="Bd" Property="Width" Value="8" />
+                          <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SecondaryTextBrush}" />
+                        </Trigger>
+
+                        <Trigger Property="IsDragging" Value="True">
+                          <Setter TargetName="Bd" Property="Width" Value="8" />
+                          <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}" />
+                        </Trigger>
+
+                        <!-- 拖动中必须保持可见：鼠标已离开滑块，若淡出会拖不到底 -->
+                        <Trigger Property="IsMouseCaptureWithin" Value="True">
+                          <Setter TargetName="Bd" Property="Opacity" Value="1" />
+                        </Trigger>
+
+                        <!--
+                          不需要滚动时彻底不出现（ScrollViewer 会把 ScrollBar 的 IsEnabled 置false，
+                          这里要向上找到那个 ScrollBar，Thumb 自身的 IsEnabled 一直是 true）。
+                        -->
+                        <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=ScrollBar}}" Value="False">
+                          <Setter TargetName="Bd" Property="Opacity" Value="0" />
+                        </DataTrigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </Thumb.Template>
+                </Thumb>
+              </Track.Thumb>
+              <Track.IncreaseRepeatButton>
+                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" />
+              </Track.IncreaseRepeatButton>
+            </Track>
+          </Grid>
+
+          <!--
+            显隐与滑块状态触发器全部放在 Thumb 模板内（见上）。
+            这里不设触发器：TargetName 只能引用**同层模板**的元素，引用 Bd 会静默失效。
+          -->
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!--
+    横向滚动条不需要：列表已设 HorizontalScrollBarVisibility="Disabled"。
+    显式给一个不可见模板，避免它在别的控件里冒出来。
+
+    注意：带 x:Key 的是**显式**资源，要用 StaticResource 引用；上面那条不带 x:Key 的是
+    **隐式**样式，自动作用于所有 ScrollBar。两者不能都是隐式（同TargetType 同类型），
+    否则后一条会覆盖前一条，列表滚动条会退化成"永远隐藏"。
+  -->
+  <Style TargetType="ScrollBar" x:Key="HiddenScrollBar">
+    <Setter Property="Visibility" Value="Collapsed" />
+    <Setter Property="Width" Value="0" />
+    <Setter Property="Height" Value="0" />
+  </Style>
+
 </ResourceDictionary>

@@ -33,3 +33,6 @@ cache/
 *.swp
 Thumbs.db
 desktop.ini
+
+# AI agent 的本机工作记忆（不属于产品代码，不入库）
+.workbuddy/

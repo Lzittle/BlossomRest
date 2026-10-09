@@ -7,4 +7,9 @@
   <ItemGroup>
     <ProjectReference Include="..\TransitShelf.Core\TransitShelf.Core.csproj" />
   </ItemGroup>
+
+  <!-- CF_HDROP 内存块的组装是纯函数，交给测试工程直接验证 -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="TransitShelf.Tests" />
+  </ItemGroup>
 </Project>

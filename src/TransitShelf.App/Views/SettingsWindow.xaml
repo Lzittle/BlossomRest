@@ -1,0 +1,254 @@
+<Window x:Class="TransitShelf.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="中转站 · 设置"
+        Width="520" Height="560"
+        WindowStyle="None" ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True">
+
+  <!--
+    独立设置窗口（FR-72 / FR-74 / FR-75，2026-10-08）。
+
+    为什么独立成窗口而不是主面板里的一页或托盘子菜单：
+    主面板只有 300×400 且默认收起，塞设置会把"用工具"和"配工具"挤在一起；
+    托盘子菜单在上一版实测里点不到、也放不下自定义输入框。
+    设置项还会随版本增长，独立窗口是唯一能持续长大的容器。
+
+    外观与浮窗同一套语言：透明窗口 + 自绘圆角（8）+ 实色底（不用亚克力，见 ADR D21），
+    配色全部 DynamicResource，跟托盘切换配色联动。
+  -->
+  <Border CornerRadius="8" BorderThickness="1"
+          Background="{DynamicResource SurfaceBrush}"
+          BorderBrush="{DynamicResource StrokeBrush}">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+
+      <!-- 标题栏：兼作拖动把手（空白区域按住可移窗口） -->
+      <Grid Grid.Row="0" Margin="16,12,8,8">
+        <TextBlock Text="设置" FontSize="13" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PrimaryTextBrush}"
+                   VerticalAlignment="Center" />
+        <Button Content="关闭" Style="{StaticResource TextButton}"
+                HorizontalAlignment="Right" Margin="0"
+                Click="OnCloseClick" />
+      </Grid>
+
+      <!-- 内容区：分组卡片 + ScrollViewer（设置项会增长，先给滚动留位） -->
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled" Padding="16,0,12,0">
+        <StackPanel Margin="0,0,4,0">
+
+          <!-- 分组一：清理策略（FR-72） -->
+          <Border CornerRadius="8" BorderThickness="1" Padding="14,12"
+                  Background="{DynamicResource SurfaceElevatedBrush}"
+                  BorderBrush="{DynamicResource StrokeBrush}">
+            <StackPanel>
+              <TextBlock Text="清理策略" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource PrimaryTextBrush}" />
+              <TextBlock Text="决定临时区能放多少、留多久。" FontSize="11" Margin="0,2,0,0"
+                         Foreground="{DynamicResource SecondaryTextBrush}"
+                         TextWrapping="Wrap" />
+
+              <!-- 上限：自定义输入 -->
+              <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                  <TextBlock Text="临时区上限" FontSize="12"
+                             Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Text="超出后最旧的条目移出列表，源文件仍在原处。"
+                             FontSize="11" Margin="0,2,0,0"
+                             Foreground="{DynamicResource SecondaryTextBrush}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBox x:Name="CapacityBox" Style="{StaticResource NumberBox}"
+                           KeyDown="OnNumberKeyDown" LostFocus="OnCapacityLostFocus" />
+                  <TextBlock Text="项" FontSize="12" Margin="6,0,0,0"
+                             Foreground="{DynamicResource SecondaryTextBrush}"
+                             VerticalAlignment="Center" />
+                </StackPanel>
+              </Grid>
+
+              <!-- 过期时长：自定义输入（小时） -->
+              <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                  <TextBlock Text="过期时长" FontSize="12"
+                             Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Text="未钉住的条目超过这个时长后，下次启动时移出列表。"
+                             FontSize="11" Margin="0,2,0,0"
+                             Foreground="{DynamicResource SecondaryTextBrush}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBox x:Name="TimeToLiveBox" Style="{StaticResource NumberBox}"
+                           KeyDown="OnNumberKeyDown" LostFocus="OnTimeToLiveLostFocus" />
+                  <TextBlock Text="小时" FontSize="12" Margin="6,0,0,0"
+                             Foreground="{DynamicResource SecondaryTextBrush}"
+                             VerticalAlignment="Center" />
+                </StackPanel>
+              </Grid>
+
+              <TextBlock x:Name="RangeHint" FontSize="11" Margin="0,10,0,0"
+                         Foreground="{DynamicResource SupportBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <!-- 分组二：退出行为（FR-74） -->
+          <Border CornerRadius="8" BorderThickness="1" Padding="14,12" Margin="0,10,0,0"
+                  Background="{DynamicResource SurfaceElevatedBrush}"
+                  BorderBrush="{DynamicResource StrokeBrush}">
+            <StackPanel>
+              <TextBlock Text="退出行为" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource PrimaryTextBrush}" />
+              <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="退出时清空未钉住的条目" FontSize="12"
+                             Foreground="{DynamicResource PrimaryTextBrush}"
+                             TextWrapping="Wrap" />
+                  <!--
+                    风险说明必须常驻：这是一个不可逆的现场丢弃动作，
+                    用户不该靠试错才知道下次启动会看到空列表（红线 R4）。
+                  -->
+                  <TextBlock Text="开启后每次退出都会丢弃现场，下次启动临时区为空。钉住的条目始终保留，源文件也始终不受影响。"
+                             FontSize="11" Margin="0,2,0,0"
+                             Foreground="{DynamicResource SupportBrush}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1" x:Name="ClearOnExitBox"
+                          Style="{StaticResource ToggleSwitch}"
+                          Checked="OnClearOnExitChanged" Unchecked="OnClearOnExitChanged" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- 分组三：界面（FR-75 / FR-73） -->
+          <Border CornerRadius="8" BorderThickness="1" Padding="14,12" Margin="0,10,0,0"
+                  Background="{DynamicResource SurfaceElevatedBrush}"
+                  BorderBrush="{DynamicResource StrokeBrush}">
+            <StackPanel>
+              <TextBlock Text="界面" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource PrimaryTextBrush}" />
+
+              <!-- 工作区 -->
+              <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="启用工作区" FontSize="12"
+                             Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Text="开启后顶部出现「临时区 / 工作区」标签，可把条目按用途分开放。"
+                             FontSize="11" Margin="0,2,0,0"
+                             Foreground="{DynamicResource SecondaryTextBrush}"
+                             TextWrapping="Wrap" />
+                  <!-- 未完成的功能不装作可用：明说在开发中，避免用户以为已经有分组 -->
+                  <TextBlock x:Name="WorkspaceNote" FontSize="11" Margin="0,2,0,0"
+                             Foreground="{DynamicResource SupportBrush}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1" x:Name="EnableWorkspaceBox"
+                          Style="{StaticResource ToggleSwitch}"
+                          Checked="OnEnableWorkspaceChanged" Unchecked="OnEnableWorkspaceChanged" />
+              </Grid>
+
+              <!-- 配色：两个选项做成小按钮组，比下拉更好点、也不会误选 -->
+              <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                  <TextBlock Text="配色" FontSize="12"
+                             Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Text="深色适合常驻，浅色适合白天与投屏。"
+                             FontSize="11" Margin="0,2,0,0"
+                             Foreground="{DynamicResource SecondaryTextBrush}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Button x:Name="FrappeButton" Content="深色" Tag="Frappe"
+                          Style="{StaticResource TextButton}" Click="OnPaletteClick" />
+                  <Button x:Name="DawnButton" Content="浅色" Tag="RosePineDawn"
+                          Style="{StaticResource TextButton}" Click="OnPaletteClick" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- 分组四：自动收录（FR-15，从托盘搬过来） -->
+          <Border CornerRadius="8" BorderThickness="1" Padding="14,12" Margin="0,10,0,12"
+                  Background="{DynamicResource SurfaceElevatedBrush}"
+                  BorderBrush="{DynamicResource StrokeBrush}">
+            <StackPanel>
+              <TextBlock Text="自动收录" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource PrimaryTextBrush}" />
+              <TextBlock Text="新落到这些目录里的文件自动进临时区，默认关闭（红线 R6）。"
+                         FontSize="11" Margin="0,2,0,0"
+                         Foreground="{DynamicResource SecondaryTextBrush}"
+                         TextWrapping="Wrap" />
+
+              <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="下载目录" FontSize="12"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
+                           VerticalAlignment="Center" />
+                <CheckBox Grid.Column="1" x:Name="WatchDownloadsBox"
+                          Style="{StaticResource ToggleSwitch}"
+                          Checked="OnWatchChanged" Unchecked="OnWatchChanged" />
+              </Grid>
+
+              <Grid Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="微信接收目录" FontSize="12"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
+                           VerticalAlignment="Center" />
+                <CheckBox Grid.Column="1" x:Name="WatchWeChatBox"
+                          Style="{StaticResource ToggleSwitch}"
+                          Checked="OnWatchChanged" Unchecked="OnWatchChanged" />
+              </Grid>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- 底部：状态回显 + 完成 -->
+      <Border Grid.Row="2" BorderThickness="0,1,0,0"
+              BorderBrush="{DynamicResource StrokeBrush}" Padding="16,10">
+        <Grid>
+          <TextBlock x:Name="HintText" FontSize="11" VerticalAlignment="Center"
+                     Foreground="{DynamicResource SecondaryTextBrush}"
+                     TextTrimming="CharacterEllipsis" />
+          <Button Content="完成" Style="{StaticResource TextButton}"
+                  HorizontalAlignment="Right" Margin="0"
+                  Click="OnCloseClick" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</Window>

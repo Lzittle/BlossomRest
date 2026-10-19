@@ -66,6 +66,23 @@ public class PathListFormatterTests
     }
 
     [Fact]
+    public void 多选内容保留路径和文字并保持顺序()
+    {
+        ShelfItem[] items =
+        [
+            File(@"C:\Users\<user>\a.txt"),
+            Text("第一段文字\n第二行"),
+            CachedImage(@"C:\Users\<user>\cache\截图.png"),
+        ];
+
+        Assert.Equal(
+            @"C:\Users\<user>\a.txt" + Environment.NewLine
+            + "第一段文字\n第二行" + Environment.NewLine
+            + @"C:\Users\<user>\cache\截图.png",
+            PathListFormatter.FormatContents(items));
+    }
+
+    [Fact]
     public void 没有可复制条目时清单为空字符串()
     {
         Assert.Equal(string.Empty, PathListFormatter.Format([Text("只有文字")]));

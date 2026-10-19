@@ -46,17 +46,54 @@ public sealed class ClipboardService
     /// <summary>复制纯文本。</summary>
     public bool CopyText(string text)
     {
-        if (TrySet(() => Clipboard.SetText(text), out var failure))
-        {
-            return true;
-        }
-
+        // CF_UNICODETEXT 是系统级通用格式，先走 Win32 可绕开 WPF/OLE 的延迟数据对象，
+        // 也避免剪贴板被占用时先白等一轮 OLE 重试。WPF 保留为兼容性后备。
         if (NativeMethods.TrySetClipboardText(text))
         {
             return true;
         }
 
+        if (TrySet(() => Clipboard.SetText(text), out var failure))
+        {
+            return true;
+        }
+
         Diagnostics.LogFailure("复制文字到剪贴板", failure);
+        return false;
+    }
+
+    /// <summary>
+    /// 同时复制文件和文字。剪贴板保留 CF_HDROP 与 UnicodeText 两种格式，
+    /// 目标应用按自己支持的格式读取：资源管理器/微信可拿到文件，AI 会话可拿到完整文本。
+    /// </summary>
+    public bool CopyMixed(IReadOnlyList<string> paths, string text)
+    {
+        if (paths.Count == 0)
+        {
+            return CopyText(text);
+        }
+
+        var files = paths.ToArray();
+        // 混合格式先走 Win32 一次性交付，避免 WPF/OLE 在某些桌面环境下
+        // 为 FileDrop + UnicodeText 创建延迟数据对象并长时间占住剪贴板。
+        if (NativeMethods.TrySetClipboardMixed(files, text))
+        {
+            return true;
+        }
+
+        if (TrySet(() =>
+            {
+                // 以 FileDrop 构造器建立同一份 DataObject，再补 UnicodeText；
+                // 逐次 SetData(FileDrop) 在部分 WPF/OLE 环境会生成不可枚举的延迟格式。
+                var data = new DataObject(DataFormats.FileDrop, files);
+                data.SetData(DataFormats.UnicodeText, text);
+                Clipboard.SetDataObject(data, true);
+            }, out var failure))
+        {
+            return true;
+        }
+
+        Diagnostics.LogFailure("复制混合内容到剪贴板", failure);
         return false;
     }
 

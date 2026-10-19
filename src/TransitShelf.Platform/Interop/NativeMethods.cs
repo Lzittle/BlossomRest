@@ -334,6 +334,14 @@ public static class NativeMethods
     public static bool TrySetClipboardText(string text) =>
         TrySetClipboardData(CF_UNICODETEXT, Encoding.Unicode.GetBytes(text + "\0"));
 
+    /// <summary>同时写入文件列表和 Unicode 文本，避免混合多选时丢掉其中一种内容。</summary>
+    public static bool TrySetClipboardMixed(IReadOnlyList<string> paths, string text) =>
+        paths.Count > 0 && TrySetClipboardData(
+        [
+            (CF_HDROP, BuildFileDropBuffer(paths)),
+            (CF_UNICODETEXT, Encoding.Unicode.GetBytes(text + "\0")),
+        ]);
+
     /// <summary>
     /// 组装 CF_HDROP 的内存块：DROPFILES 头 + 每条路径各带一个 NUL + 末尾再补一个 NUL。
     /// 头固定 20 字节（五个字段都是 4 字节），32 位与 64 位一致。
@@ -358,10 +366,13 @@ public static class NativeMethods
     }
 
     private static bool TrySetClipboardData(uint format, byte[] payload)
+        => TrySetClipboardData([(format, payload)]);
+
+    private static bool TrySetClipboardData(IReadOnlyList<(uint Format, byte[] Payload)> formats)
     {
         for (var attempt = 0; attempt < ClipboardAttempts; attempt++)
         {
-            if (TryWriteClipboardData(format, payload))
+            if (TryWriteClipboardData(formats))
             {
                 return true;
             }
@@ -376,29 +387,27 @@ public static class NativeMethods
     }
 
     /// <summary>单次写入尝试：分配全局内存 → 写入内容 → 打开剪贴板 → 清空 → 交付所有权。</summary>
-    private static bool TryWriteClipboardData(uint format, byte[] payload)
+    private static bool TryWriteClipboardData(IReadOnlyList<(uint Format, byte[] Payload)> formats)
     {
-        var memory = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)payload.Length);
-        if (memory == IntPtr.Zero)
-        {
-            return false;
-        }
-
+        var memories = new List<IntPtr>(formats.Count);
         try
         {
-            var target = GlobalLock(memory);
-            if (target == IntPtr.Zero)
+            foreach (var format in formats)
             {
-                return false;
-            }
+                var memory = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)format.Payload.Length);
+                if (memory == IntPtr.Zero) return false;
+                memories.Add(memory);
 
-            try
-            {
-                Marshal.Copy(payload, 0, target, payload.Length);
-            }
-            finally
-            {
-                _ = GlobalUnlock(memory);
+                var target = GlobalLock(memory);
+                if (target == IntPtr.Zero) return false;
+                try
+                {
+                    Marshal.Copy(format.Payload, 0, target, format.Payload.Length);
+                }
+                finally
+                {
+                    _ = GlobalUnlock(memory);
+                }
             }
 
             if (!OpenClipboard(IntPtr.Zero))
@@ -408,14 +417,18 @@ public static class NativeMethods
 
             try
             {
-                EmptyClipboard();
-                if (SetClipboardData(format, memory) == IntPtr.Zero)
+                if (!EmptyClipboard()) return false;
+                for (var index = 0; index < formats.Count; index++)
                 {
-                    return false;
+                    if (SetClipboardData(formats[index].Format, memories[index]) == IntPtr.Zero)
+                    {
+                        return false;
+                    }
+
+                    // 成功后内存块归系统所有，绝不能再 GlobalFree。
+                    memories[index] = IntPtr.Zero;
                 }
 
-                // 成功后内存块归系统所有，绝不能再 GlobalFree。
-                memory = IntPtr.Zero;
                 return true;
             }
             finally
@@ -425,9 +438,9 @@ public static class NativeMethods
         }
         finally
         {
-            if (memory != IntPtr.Zero)
+            foreach (var memory in memories)
             {
-                _ = GlobalFree(memory);
+                if (memory != IntPtr.Zero) _ = GlobalFree(memory);
             }
         }
     }

@@ -68,6 +68,21 @@ public class ClipboardServiceTests
         }));
     }
 
+    [Fact]
+    public void 混合复制同时保留文件列表和文字内容()
+    {
+        RunSta(() => WithClipboardPreserved(() =>
+        {
+            var service = new ClipboardService();
+            const string text = "多选文字\n第二行";
+
+            AssertClipboardAccepts(() => service.CopyMixed(SamplePaths, text), "复制混合内容");
+
+            Assert.Equal(SamplePaths, Clipboard.GetFileDropList().Cast<string>().ToArray());
+            Assert.Equal(text, Clipboard.GetText());
+        }));
+    }
+
     /// <summary>
     /// 重试到超时为止：剪贴板被别的程序短暂占用是常态，不该判成失败；
     /// 超过窗口仍写不进去，说明这条通道真的坏了（或环境把它长期占住了）。

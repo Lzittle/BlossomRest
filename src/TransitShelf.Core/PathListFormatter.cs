@@ -25,4 +25,13 @@ public static class PathListFormatter
     /// <summary>换行分隔的绝对路径清单；无可用条目时返回空字符串。</summary>
     public static string Format(IEnumerable<ShelfItem> items) =>
         string.Join(Environment.NewLine, Paths(items));
+
+    /// <summary>
+    /// 按列表顺序保留所有可复制内容：有磁盘位置的条目输出路径，文字条目输出原文。
+    /// 这是多选复制的纯文本视图；文件条目同时仍会以 CF_HDROP 提供给资源管理器和微信。
+    /// </summary>
+    public static string FormatContents(IEnumerable<ShelfItem> items) =>
+        string.Join(
+            Environment.NewLine,
+            items.Select(item => PathOf(item) ?? item.Text).Where(value => !string.IsNullOrEmpty(value)));
 }

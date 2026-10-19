@@ -1174,7 +1174,7 @@ public partial class ShelfWindow : Window
         BatchBar.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
         RefreshBatchBar();
 
-        Status(enabled ? "点条目勾选，再点「复制路径清单」" : "已退出多选");
+        Status(enabled ? "点条目勾选，再点「复制所选内容」" : "已退出多选");
     }
 
     /// <summary>
@@ -1207,8 +1207,8 @@ public partial class ShelfWindow : Window
     }
 
     /// <summary>
-    /// 复制勾选项的绝对路径清单（FR-21）：换行分隔、按列表顺序。
-    /// 走纯文本而不是 CF_HDROP——目标是"贴进 AI 会话当引用地址"，不是"粘贴成附件"。
+    /// 复制勾选项的全部内容：文件同时挂载 CF_HDROP 与路径文本，文字原文按列表顺序保留。
+    /// 目标应用可按能力选择文件附件或 UnicodeText，不再静默跳过文字条目。
     /// </summary>
     private void OnBatchCopyPathsClick(object sender, RoutedEventArgs e)
     {
@@ -1220,14 +1220,14 @@ public partial class ShelfWindow : Window
         }
 
         var paths = PathListFormatter.Paths(selected);
-        if (paths.Count == 0)
+        var content = PathListFormatter.FormatContents(selected);
+        if (string.IsNullOrEmpty(content))
         {
-            Status("勾中的都是文字条目：路径清单只收文件、文件夹和图片");
+            Status("勾中的条目没有可复制内容");
             return;
         }
 
-        var skipped = selected.Count - paths.Count;
-        var copied = _clipboard.CopyText(PathListFormatter.Format(selected));
+        var copied = _clipboard.CopyMixed(paths, content);
 
         if (!copied)
         {
@@ -1235,9 +1235,12 @@ public partial class ShelfWindow : Window
             return;
         }
 
-        Status(skipped == 0
-            ? $"已复制 {paths.Count} 条路径，去目标处 Ctrl+V"
-            : $"已复制 {paths.Count} 条路径，跳过 {skipped} 条文字条目");
+        var textCount = selected.Count(item => item.Kind == ItemKind.Text);
+        Status(paths.Count == 0
+            ? $"已复制 {textCount} 条文字，去目标处 Ctrl+V"
+            : textCount == 0
+                ? $"已复制 {paths.Count} 条路径，去目标处 Ctrl+V"
+                : $"已复制 {paths.Count} 条路径和 {textCount} 条文字，去目标处 Ctrl+V");
     }
 
     private void UpdateBatchBar()

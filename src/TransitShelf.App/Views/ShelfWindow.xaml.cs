@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -62,6 +63,8 @@ public partial class ShelfWindow : Window
     private IntPtr _hwnd;
     private bool _expanded;
     private bool _clearArmed;
+    private bool _clearArmedForWorkspace;
+    private string? _clearArmedGroupId;
     private bool _suppressClick;
     private bool _draggingOut;
     private Point? _dragOrigin;
@@ -126,6 +129,8 @@ public partial class ShelfWindow : Window
         {
             _clearTimer.Stop();
             _clearArmed = false;
+            _clearArmedForWorkspace = false;
+            _clearArmedGroupId = null;
             UpdateClearButton();
         };
 
@@ -146,16 +151,18 @@ public partial class ShelfWindow : Window
         _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
         _clockTimer.Tick += (_, _) => _shelf.RefreshTimeLabels();
 
-        _shelf.Changed += RefreshFooter;
-        _shelf.Changed += UpdateBatchBar;
+        _itemView = CollectionViewSource.GetDefaultView(_shelf.Items);
+        _itemView.Filter = value => value is ShelfItem item && IsCurrentItem(item);
+        _workspace.Changed += OnWorkspaceChanged;
+        _shelf.Changed += RefreshWorkspace;
         _shelf.Changed += ScheduleSave;
-        ItemList.ItemsSource = _shelf.Items;
+        ItemList.ItemsSource = _itemView;
         ItemList.SelectionChanged += (_, _) => UpdateBatchBar();
 
         SourceInitialized += OnSourceInitialized;
         Closed += OnClosed;
         ApplyLayout();
-        RefreshFooter();
+        RefreshWorkspace();
         LoadState();
         _clockTimer.Start();
     }
@@ -226,6 +233,9 @@ public partial class ShelfWindow : Window
         return IntPtr.Zero;
     }
 
+    /// <summary>托盘/悬浮球右键菜单调用：面板当前是否处于展开态（决定「显示/收起」两项谁是可用的）。</summary>
+    public bool IsPanelExpanded => _expanded;
+
     /// <summary>托盘菜单 / 快捷键调用：展开并抢回置顶。</summary>
     public void ShowPanel()
     {
@@ -239,12 +249,18 @@ public partial class ShelfWindow : Window
 
     public void ClearAll()
     {
-        // 清空只清没钉住的：钉住的语义就是"别动它"（FR-43）。
-        var (removed, kept) = _shelf.ClearUnpinned();
+        // 托盘和右键菜单也走同一套二次确认，避免误触直接清空（FR-43）。
+        // 菜单项明确叫「清空临时区」，所以不受当前工作区标签影响。
+        RequestClear(workspaceScope: false, groupId: null);
+    }
+
+    private void ClearItems(string? groupId)
+    {
+        var (removed, kept) = _shelf.ClearUnpinned(groupId);
 
         if (removed == 0 && kept == 0)
         {
-            Status("临时区已经是空的");
+            Status("这里已经是空的");
         }
         else if (kept > 0)
         {
@@ -332,18 +348,25 @@ public partial class ShelfWindow : Window
     {
         _settings.ClearOnExit = enabled;
         ScheduleSave();
-        Status(enabled ? "退出时将清空未钉住的条目（钉住的保留）" : "退出时不再清空，条目留到下次启动");
+        Status(enabled ? "退出时清空临时区未钉住项，钉住项和工作区保留" : "退出时不再清空，条目留到下次启动");
     }
 
     /// <summary>
     /// 开关：启用工作区（FR-75，默认关闭）。
     ///
     /// 关闭时主面板只有临时区，与现有行为完全一致；开启后顶部出现「临时区 / 工作区」标签。
-    /// 本轮只落盘设置，工作区界面在下一阶段实现（见进度与待办第七节）。
+    /// 关闭只隐藏入口，已保存分组与条目继续保留。
     /// </summary>
     public void SetEnableWorkspace(bool enabled)
     {
         _settings.EnableWorkspace = enabled;
+        if (!enabled)
+        {
+            _workspaceActive = false;
+        }
+        ResetScopeActions();
+        RefreshWorkspace();
+        ApplyLayout();
         ScheduleSave();
         Status(enabled ? "已启用工作区" : "已关闭工作区，回到单临时区模式");
     }
@@ -421,23 +444,25 @@ public partial class ShelfWindow : Window
     private void ApplyLayout()
     {
         var work = SystemParameters.WorkArea;
+        var panelWidth = _workspaceActive ? 320 : ExpandedWidth;
+        var panelHeight = _workspaceActive ? 520 : ExpandedHeight;
 
         if (_expanded)
         {
-            Width = ExpandedWidth;
-            Height = ExpandedHeight;
+            Width = panelWidth;
+            Height = panelHeight;
             // 展开态用约等于系统圆角的圆角（透明窗口下系统不再代劳，见 XAML 顶部说明）
             RootBorder.CornerRadius = new CornerRadius(ExpandedCornerRadius);
             PillPanel.Visibility = Visibility.Collapsed;
             PanelRoot.Visibility = Visibility.Visible;
-            Left = work.Right - ExpandedWidth - EdgeMargin;
-            Top = work.Bottom - ExpandedHeight - EdgeMargin;
+            Left = work.Right - panelWidth - EdgeMargin;
+            Top = work.Bottom - panelHeight - EdgeMargin;
 
             // 胶囊被拖动过时，面板贴着胶囊展开，而不是跳回右下角
             if (_customLeft is { } customLeft && _customTop is { } customTop)
             {
-                Left = Math.Clamp(customLeft + CollapsedSize - ExpandedWidth, work.Left, work.Right - ExpandedWidth);
-                Top = Math.Clamp(customTop + CollapsedSize - ExpandedHeight, work.Top, work.Bottom - ExpandedHeight);
+                Left = Math.Clamp(customLeft + CollapsedSize - panelWidth, work.Left, work.Right - panelWidth);
+                Top = Math.Clamp(customTop + CollapsedSize - panelHeight, work.Top, work.Bottom - panelHeight);
             }
         }
         else
@@ -501,9 +526,9 @@ public partial class ShelfWindow : Window
 
     private void RefreshFooter()
     {
-        var count = _shelf.Items.Count;
-        CountText.Text = count.ToString();
-        FooterText.Text = $"{count} / {_shelf.Capacity} 条";
+        var count = CurrentItems.Count();
+        CountText.Text = _shelf.Items.Count.ToString();
+        FooterText.Text = _workspaceActive ? $"{count} 条 · 长期保留" : $"{count} / {_shelf.Capacity} 条";
         EmptyState.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
         ItemList.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
@@ -518,9 +543,16 @@ public partial class ShelfWindow : Window
         {
             AppPaths.EnsureCreated();
 
-            var (items, settings) = _store.LoadSnapshot();
+            var (items, groups, settings) = _store.LoadSnapshot();
             _settings = settings;
-            _shelf.Capacity = settings.Capacity;
+            _workspace.LoadFrom(groups);
+            // 分组缺失时保住引用，不能让它在不可见区域消失或被临时区清理。
+            foreach (var item in items.Where(item => item.GroupId is not null && _workspace.Find(item.GroupId) is null))
+            {
+                item.Pinned = true;
+                item.GroupId = null;
+            }
+            _shelf.Capacity = settings.SafeCapacity;
 
             // 配色先于界面内容应用：设置文件里的名字可能已过期，Normalize 会收敛到已知方案。
             PaletteService.Apply(settings.Palette);
@@ -541,6 +573,7 @@ public partial class ShelfWindow : Window
             }
 
             AppPaths.CleanOrphanCache(_shelf.Items.Select(item => item.CachePath));
+            RefreshWorkspace();
             ApplyWatching();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -559,7 +592,7 @@ public partial class ShelfWindow : Window
     {
         try
         {
-            _store.Save(_shelf.Items, _settings);
+            _store.Save(_shelf.Items, _workspace.Groups, _settings);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -657,6 +690,67 @@ public partial class ShelfWindow : Window
 
     private void OnCollapseClick(object sender, RoutedEventArgs e) => Collapse();
 
+    /// <summary>
+    /// 收起态悬浮球右键：弹出与托盘同一套动作。
+    ///
+    /// 不传 includePanelVisibility——球本来就是收起态，「显示中转站 / 收起」在这里毫无意义。
+    /// 用 ButtonUp 而不是 ButtonDown：与左键"按下-拖动-抬起"的手势模型保持一致，
+    /// 避免按下就弹菜单、随后拖动胶囊时菜单还挂在屏幕上。
+    /// </summary>
+    private void OnPillRightClick(object sender, MouseButtonEventArgs e)
+    {
+        // 右键不该打断左键的拖动状态，但要清掉"按住"标记，否则鼠标移回时会被当成还在拖
+        _pillPressed = false;
+        if (PillPanel.IsMouseCaptured)
+        {
+            PillPanel.ReleaseMouseCapture();
+        }
+
+        _expandTimer.Stop();
+        ShowShelfContextMenu(includePanelVisibility: false);
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 展开态面板空白处右键。落在条目或按钮上时不接管——那些位置有自己的右键菜单
+    /// （条目右键菜单见 ShelfWindow.xaml 的 DataTemplate），抢过来会让用户点不到"删除条目"。
+    /// </summary>
+    private void OnPanelRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject source
+            && (FindAncestor<ListBoxItem>(source) is not null || FindAncestor<Button>(source) is not null))
+        {
+            return;
+        }
+
+        // 面板已展开，同样不需要「显示中转站 / 收起」
+        ShowShelfContextMenu(includePanelVisibility: false);
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 弹出统一右键菜单。
+    ///
+    /// 用 WPF 的 ContextMenu 而不是 WinForms 的 ContextMenuStrip：本窗口是
+    /// ShowActivated=False 的不抢焦点窗口，WinForms 菜单需要宿主已激活才能正常接收消息，
+    /// 直接 Show 出来会点不中。动作清单与托盘那一份同源（ShelfActions）。
+    /// </summary>
+    private void ShowShelfContextMenu(bool includePanelVisibility)
+    {
+        var menu = new ContextMenu
+        {
+            PlacementTarget = this,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint,
+        };
+
+        foreach (var entry in ShelfActions.ToWpfItems(this, includePanelVisibility))
+        {
+            menu.Items.Add(entry);
+        }
+
+        menu.IsOpen = true;
+    }
+
     private void OnWindowKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
@@ -726,12 +820,17 @@ public partial class ShelfWindow : Window
         SetDropHighlight(false);
 
         var added = 0;
+        if (!CanCollectInCurrentScope())
+        {
+            e.Handled = true;
+            return;
+        }
         if (e.Data.GetDataPresent(DataFormats.FileDrop)
             && e.Data.GetData(DataFormats.FileDrop) is string[] paths)
         {
             foreach (var path in paths)
             {
-                _shelf.AddFile(path);
+                _shelf.AddFile(path, CurrentGroupId);
                 added++;
             }
         }
@@ -739,7 +838,7 @@ public partial class ShelfWindow : Window
                  && e.Data.GetData(DataFormats.UnicodeText) is string text
                  && !string.IsNullOrWhiteSpace(text))
         {
-            _shelf.AddText(text);
+            _shelf.AddText(text, CurrentGroupId);
             added = 1;
         }
 
@@ -1007,24 +1106,40 @@ public partial class ShelfWindow : Window
 
     private void OnClearClick(object sender, RoutedEventArgs e)
     {
-        if (_shelf.Items.Count == 0)
+        RequestClear(_workspaceActive, CurrentGroupId);
+    }
+
+    private void RequestClear(bool workspaceScope, string? groupId)
+    {
+        var hasItems = _shelf.Items.Any(item =>
+            workspaceScope ? item.GroupId == groupId : item.GroupId is null);
+        if (!hasItems)
         {
+            Status("这里已经是空的");
             return;
         }
 
-        if (!_clearArmed)
+        var sameScope = _clearArmed
+            && _clearArmedForWorkspace == workspaceScope
+            && _clearArmedGroupId == groupId;
+        if (!sameScope)
         {
             _clearArmed = true;
+            _clearArmedForWorkspace = workspaceScope;
+            _clearArmedGroupId = groupId;
             UpdateClearButton();
+            _clearTimer.Stop();
             _clearTimer.Start();
-            Status("再点一次确认清空（钉住的会保留，原始文件不受影响）");
+            Status(workspaceScope
+                ? "再点一次确认清空当前分组（钉住的会保留，原始文件不受影响）"
+                : "再点一次确认清空临时区（钉住的会保留，原始文件不受影响）");
             return;
         }
 
         _clearTimer.Stop();
         _clearArmed = false;
         UpdateClearButton();
-        ClearAll();
+        ClearItems(workspaceScope ? groupId : null);
     }
 
     private void OnCollectClick(object sender, RoutedEventArgs e)
@@ -1079,7 +1194,7 @@ public partial class ShelfWindow : Window
 
     private void OnBatchSelectAllClick(object sender, RoutedEventArgs e)
     {
-        if (ItemList.SelectedItems.Count > 0 && ItemList.SelectedItems.Count == _shelf.Items.Count)
+        if (ItemList.SelectedItems.Count > 0 && ItemList.SelectedItems.Count == ItemList.Items.Count)
         {
             ItemList.SelectedItems.Clear();
         }
@@ -1097,7 +1212,7 @@ public partial class ShelfWindow : Window
     /// </summary>
     private void OnBatchCopyPathsClick(object sender, RoutedEventArgs e)
     {
-        var selected = _shelf.Items.Where(item => ItemList.SelectedItems.Contains(item)).ToList();
+        var selected = CurrentItems.Where(item => ItemList.SelectedItems.Contains(item)).ToList();
         if (selected.Count == 0)
         {
             Status("先点条目勾选，再复制路径清单");
@@ -1128,7 +1243,7 @@ public partial class ShelfWindow : Window
     private void UpdateBatchBar()
     {
         // 条目被清空或全部过期后没有可勾选的对象，自动退出，不留一个空的操作条。
-        if (_multiSelect && _shelf.Items.Count == 0)
+        if (_multiSelect && ItemList.Items.Count == 0)
         {
             ExitMultiSelectSilently();
             return;
@@ -1152,7 +1267,7 @@ public partial class ShelfWindow : Window
         var selected = ItemList.SelectedItems.Count;
         BatchCountText.Text = $"已选 {selected} 项";
         BatchSelectAllButton.Content =
-            selected > 0 && selected == _shelf.Items.Count ? "全不选" : "全选";
+            selected > 0 && selected == ItemList.Items.Count ? "全不选" : "全选";
     }
 
     private void OnTogglePinClick(object sender, RoutedEventArgs e)
@@ -1186,6 +1301,7 @@ public partial class ShelfWindow : Window
     /// <summary>把剪贴板内容收进架子：文件 &gt; 文字 &gt; 图片（FR-13）。</summary>
     public void CollectFromClipboard()
     {
+        if (!CanCollectInCurrentScope()) return;
         var payload = Diagnostics.Measure("读取剪贴板", _clipboard.Read);
         var added = 0;
 
@@ -1193,13 +1309,13 @@ public partial class ShelfWindow : Window
         {
             foreach (var file in payload.Files)
             {
-                _shelf.AddFile(file);
+                _shelf.AddFile(file, CurrentGroupId);
                 added++;
             }
         }
         else if (!string.IsNullOrWhiteSpace(payload.Text))
         {
-            _shelf.AddText(payload.Text);
+            _shelf.AddText(payload.Text, CurrentGroupId);
             added = 1;
         }
         else if (payload.Image is not null)
@@ -1209,7 +1325,7 @@ public partial class ShelfWindow : Window
             {
                 // 名字精确到秒：只到分钟的话，一分钟内连截两张图会得到完全一样的名字，
                 // 列表里两行长得一模一样。跨天也靠日期段区分。
-                _shelf.AddCachedImage(cached, $"截图 {DateTime.Now:MMdd-HHmmss}.png");
+                _shelf.AddCachedImage(cached, $"截图 {DateTime.Now:MMdd-HHmmss}.png", CurrentGroupId);
                 added = 1;
             }
         }
@@ -1220,6 +1336,7 @@ public partial class ShelfWindow : Window
     /// <summary>手动选择文件加入（FR-14）。</summary>
     public void AddFilesFromDialog()
     {
+        if (!CanCollectInCurrentScope()) return;
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "添加到中转站",
@@ -1252,7 +1369,7 @@ public partial class ShelfWindow : Window
 
         foreach (var file in dialog.FileNames)
         {
-            _shelf.AddFile(file);
+            _shelf.AddFile(file, CurrentGroupId);
         }
 
         Status($"已添加 {dialog.FileNames.Length} 项");

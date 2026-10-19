@@ -13,6 +13,7 @@ public sealed class ShelfItem : INotifyPropertyChanged
     private ItemState _state = ItemState.Ok;
     private string? _path;
     private DateTimeOffset _createdAt;
+    private string? _groupId;
 
     public required string Id { get; init; }
 
@@ -93,6 +94,30 @@ public sealed class ShelfItem : INotifyPropertyChanged
             OnPropertyChanged(nameof(PinActionLabel));
         }
     }
+
+    /// <summary>
+    /// 所属分组（FR-60）。<c>null</c> 表示在临时区。
+    ///
+    /// **带 setter**：条目要能跨组移动（PRD FR-60「条目可跨组移动」），移动是常见的整理动作。
+    /// </summary>
+    public string? GroupId
+    {
+        get => _groupId;
+        set
+        {
+            if (_groupId == value)
+            {
+                return;
+            }
+
+            _groupId = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsTemporary));
+        }
+    }
+
+    /// <summary>是否在临时区（决定它是否受容量上限与过期清理约束）。</summary>
+    public bool IsTemporary => GroupId is null;
 
     /// <summary>无源图片的缓存 PNG 路径；其余类型为 null。</summary>
     public string? CachePath { get; init; }

@@ -128,7 +128,7 @@
                     风险说明必须常驻：这是一个不可逆的现场丢弃动作，
                     用户不该靠试错才知道下次启动会看到空列表（红线 R4）。
                   -->
-                  <TextBlock Text="开启后每次退出都会丢弃现场，下次启动临时区为空。钉住的条目始终保留，源文件也始终不受影响。"
+                  <TextBlock Text="开启后退出会清空临时区未钉住的条目。钉住项和工作区始终保留，源文件不受影响。"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SupportBrush}"
                              TextWrapping="Wrap" />
@@ -161,7 +161,7 @@
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              TextWrapping="Wrap" />
-                  <!-- 未完成的功能不装作可用：明说在开发中，避免用户以为已经有分组 -->
+                  <!-- 关闭工作区只隐藏入口，不丢弃已有分组 -->
                   <TextBlock x:Name="WorkspaceNote" FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SupportBrush}"
                              TextWrapping="Wrap" />

@@ -108,7 +108,7 @@ public class ShelfSettingsTests
         };
 
         var json = TransitShelf.Core.Persistence.ShelfStateCodec.Serialize([], settings);
-        var (_, loaded) = TransitShelf.Core.Persistence.ShelfStateCodec.DeserializeSnapshot(json);
+        var (_, _, loaded) = TransitShelf.Core.Persistence.ShelfStateCodec.DeserializeSnapshot(json);
 
         Assert.Equal(30, loaded.Capacity);
         Assert.Equal(168, loaded.TimeToLiveHours);
@@ -140,7 +140,7 @@ public class ShelfSettingsTests
         }
         """;
 
-        var (_, settings) = TransitShelf.Core.Persistence.ShelfStateCodec.DeserializeSnapshot(legacy);
+        var (_, _, settings) = TransitShelf.Core.Persistence.ShelfStateCodec.DeserializeSnapshot(legacy);
 
         Assert.Equal(15, settings.Capacity);
         Assert.Equal(6, settings.TimeToLiveHours);

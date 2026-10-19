@@ -34,7 +34,8 @@
               Cursor="SizeAll"
               MouseLeftButtonDown="OnPillMouseDown"
               MouseMove="OnPillMouseMove"
-              MouseLeftButtonUp="OnPillClick">
+              MouseLeftButtonUp="OnPillClick"
+              MouseRightButtonUp="OnPillRightClick">
         <Grid>
           <!--
             品牌主视觉：与 exe 图标同一张玫瑰文件夹（透明底 PNG）。
@@ -62,17 +63,43 @@
       </Border>
 
       <!-- 展开态：临时区面板 -->
-      <Grid x:Name="PanelRoot" PreviewMouseLeftButtonDown="OnPanelPreviewMouseDown">
+      <Grid x:Name="PanelRoot" Background="Transparent" PreviewMouseLeftButtonDown="OnPanelPreviewMouseDown"
+            MouseRightButtonUp="OnPanelRightClick">
         <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="*" />
           <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="12,10,8,6">
-          <TextBlock Text="中转站" FontSize="13" FontWeight="SemiBold"
+        <StackPanel x:Name="WorkspaceTabs" Grid.Row="0" Orientation="Horizontal"
+                    Margin="8,8,8,0" Visibility="Collapsed">
+          <Button x:Name="TemporaryTab" Content="临时区" Style="{StaticResource TextButton}"
+                  Click="OnTemporaryTabClick" AutomationProperties.AutomationId="TemporaryTab" />
+          <Button x:Name="WorkspaceTab" Content="工作区" Style="{StaticResource TextButton}"
+                  Click="OnWorkspaceTabClick" AutomationProperties.AutomationId="WorkspaceTab" />
+        </StackPanel>
+
+        <Grid x:Name="WorkspaceBar" Grid.Row="1" Margin="12,6,8,2" Visibility="Collapsed">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <Button x:Name="GroupPicker" Style="{StaticResource TextButton}" Click="OnGroupPickerClick"
+                  HorizontalContentAlignment="Left" AutomationProperties.Name="选择分组">
+            <TextBlock x:Name="GroupNameText" Text="选择分组" TextTrimming="CharacterEllipsis" MaxWidth="160" />
+          </Button>
+          <Button Grid.Column="1" Content="新建" Style="{StaticResource TextButton}" Click="OnCreateGroupClick" />
+          <Button x:Name="GroupManageButton" Grid.Column="2" Content="管理" Style="{StaticResource TextButton}"
+                  Click="OnManageGroupClick" />
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="8,10,8,6">
+          <TextBlock x:Name="PanelTitle" Text="中转站" FontSize="13" FontWeight="SemiBold"
                      Foreground="{DynamicResource PrimaryTextBrush}"
-                     VerticalAlignment="Center" />
+                     VerticalAlignment="Center" Visibility="Collapsed" />
           <StackPanel x:Name="HeaderActions" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="收录" Style="{StaticResource TextButton}" Click="OnCollectClick"
                     ToolTip="把剪贴板里的文字、文件或图片收进来（Ctrl+Alt+C）" />
@@ -98,7 +125,7 @@
           </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="3">
           <!-- 空状态：矢量插画 + 一句引导。只在列表为空时渲染（见 ShelfWindow 的 UpdateEmptyState） -->
           <StackPanel x:Name="EmptyState" Margin="16,14,16,0" VerticalAlignment="Top">
             <Viewbox Width="168" Height="126" HorizontalAlignment="Center">
@@ -163,10 +190,13 @@
               </Canvas>
             </Viewbox>
 
-            <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" TextAlignment="Center"
+            <TextBlock x:Name="EmptyHint" Margin="0,14,0,0" TextWrapping="Wrap" TextAlignment="Center"
                        FontSize="12" LineHeight="20"
                        Foreground="{DynamicResource SecondaryTextBrush}"
                        Text="把文件、文件夹或文字拖进来。&#x0a;单击：文件夹打开 / 其余复制；双击打开；按住条目可拖到其他应用。" />
+            <Button x:Name="EmptyCreateGroupButton" Content="新建分组" HorizontalAlignment="Center"
+                    Margin="0,12,0,0" Style="{StaticResource TextButton}" Click="OnCreateGroupClick"
+                    Visibility="Collapsed" />
           </StackPanel>
 
           <ListBox x:Name="ItemList" Background="Transparent" BorderThickness="0"
@@ -211,7 +241,7 @@
               <DataTemplate>
                 <Grid>
                   <Grid.ContextMenu>
-                    <ContextMenu>
+                    <ContextMenu Opened="OnItemContextMenuOpened">
                       <MenuItem Header="复制路径" Click="OnCopyPathClick" />
                       <MenuItem Header="在文件夹中显示" Click="OnRevealClick">
                         <MenuItem.Icon>
@@ -220,6 +250,9 @@
                         </MenuItem.Icon>
                       </MenuItem>
                       <MenuItem Header="{Binding PinActionLabel}" Click="OnTogglePinClick" />
+                      <MenuItem Header="钉入工作区 / 移动到分组" SubmenuOpened="OnMoveMenuOpened" Tag="WorkspaceMove">
+                        <MenuItem Header="选择分组…" />
+                      </MenuItem>
                       <Separator />
                       <MenuItem Header="修复乱码名称" Click="OnRepairNameClick" />
                       <MenuItem Header="重命名源文件为显示名" Click="OnRenameSourceClick" />
@@ -343,10 +376,15 @@
           </ListBox>
         </Grid>
 
-        <Grid Grid.Row="2" Margin="12,6,12,10">
+        <Grid Grid.Row="4" Margin="12,6,12,10">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
           <TextBlock x:Name="FooterText" FontSize="11" VerticalAlignment="Center"
                      Foreground="{DynamicResource SecondaryTextBrush}" />
-          <TextBlock x:Name="StatusText" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"
+          <TextBlock x:Name="StatusText" Grid.Row="1" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
+                     VerticalAlignment="Center"
                      Foreground="{DynamicResource HighlightBrush}" />
         </Grid>
       </Grid>

@@ -12,14 +12,14 @@ public static class ShelfRetention
         }
     }
 
-    /// <summary>过滤掉已过期的未钉住条目；置顶项永不过期。</summary>
+    /// <summary>只清理临时区过期的未钉住条目；工作区和钉住项长期保留。</summary>
     public static IReadOnlyList<ShelfItem> RemoveExpired(
         IEnumerable<ShelfItem> items,
         TimeSpan timeToLive,
         DateTimeOffset now)
     {
         return items
-            .Where(item => item.Pinned || now - item.CreatedAt < timeToLive)
+            .Where(item => !item.IsTemporary || item.Pinned || now - item.CreatedAt < timeToLive)
             .ToList();
     }
 }

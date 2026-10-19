@@ -55,10 +55,13 @@ public sealed class ShelfService
 
     public event Action? Changed;
 
-    public ShelfItem AddFile(string path)
+    public ShelfItem AddFile(string path, string? groupId = null)
     {
         var full = System.IO.Path.GetFullPath(path);
+        // 去重**在同一分组内**进行：同一个文件放临时区和工作区分组里是两种不同的用法，
+        // 不该因为路径相同就把其中一份"复活"，那会让用户以为自己只存了一份。
         var existing = _inner.FirstOrDefault(i => i.Path is not null
+            && i.GroupId == groupId
             && string.Equals(i.Path, full, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
         {
@@ -72,6 +75,7 @@ public sealed class ShelfService
             Kind = isFolder ? ItemKind.Folder : ItemKind.File,
             DisplayName = UniqueName(System.IO.Path.GetFileName(full.TrimEnd('\\', '/')) is { Length: > 0 } name ? name : full),
             Path = full,
+            GroupId = groupId,
             CreatedAt = DateTimeOffset.Now,
         };
 
@@ -82,10 +86,10 @@ public sealed class ShelfService
         return item;
     }
 
-    public ShelfItem AddText(string text)
+    public ShelfItem AddText(string text, string? groupId = null)
     {
         var trimmed = text.Trim();
-        var existing = _inner.FirstOrDefault(i => i.Kind == ItemKind.Text && i.Text == trimmed);
+        var existing = _inner.FirstOrDefault(i => i.Kind == ItemKind.Text && i.Text == trimmed && i.GroupId == groupId);
         if (existing is not null)
         {
             return Revive(existing);
@@ -99,6 +103,7 @@ public sealed class ShelfService
             // 否则界面上会出现几个长得一模一样的条目，用户分不清谁是谁。
             DisplayName = UniqueName(trimmed.Length > 40 ? trimmed[..40] + "…" : trimmed),
             Text = trimmed,
+            GroupId = groupId,
             CreatedAt = DateTimeOffset.Now,
         };
 
@@ -110,9 +115,10 @@ public sealed class ShelfService
     }
 
     /// <summary>收录无源图片：只保存缓存 PNG 的路径，不持有位图（红线 R8）。</summary>
-    public ShelfItem AddCachedImage(string cachePath, string displayName)
+    public ShelfItem AddCachedImage(string cachePath, string displayName, string? groupId = null)
     {
         var existing = _inner.FirstOrDefault(i => i.CachePath is not null
+            && i.GroupId == groupId
             && string.Equals(i.CachePath, cachePath, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
         {
@@ -125,6 +131,7 @@ public sealed class ShelfService
             Kind = ItemKind.File,
             DisplayName = UniqueName(displayName),
             CachePath = cachePath,
+            GroupId = groupId,
             CreatedAt = DateTimeOffset.Now,
         };
 
@@ -206,12 +213,14 @@ public sealed class ShelfService
     }
 
     /// <summary>
-    /// 清空临时区，但**保留钉住项**（FR-43）。
-    /// 返回移除数量与保留的钉住数量。
+    /// 清空未钉住条目（FR-43），返回移除数量与保留的钉住数量。
+    ///
+    /// <paramref name="groupId"/> 是作用域：**传 null 表示只清临时区**，这样在工作区点「清空」
+    /// 不会把临时区也一起清掉（反之亦然）。调用方应传当前正在看的那一区。
     /// </summary>
-    public (int Removed, int Kept) ClearUnpinned()
+    public (int Removed, int Kept) ClearUnpinned(string? groupId = null)
     {
-        var victims = _inner.Where(item => !item.Pinned).ToList();
+        var victims = _inner.Where(item => item.GroupId == groupId && !item.Pinned).ToList();
         foreach (var victim in victims)
         {
             _inner.Remove(victim);
@@ -222,7 +231,7 @@ public sealed class ShelfService
             Changed?.Invoke();
         }
 
-        return (victims.Count, _inner.Count);
+        return (victims.Count, _inner.Count(i => i.GroupId == groupId && i.Pinned));
     }
 
     public bool Remove(ShelfItem item)
@@ -258,9 +267,11 @@ public sealed class ShelfService
 
     private void Trim()
     {
-        while (_inner.Count > Capacity)
+        // **只淘汰临时区条目**（GroupId == null）。工作区是长期存放（FR-60），
+        // 若不排除在这里，工作区条目会被临时区的容量上限无声删掉——那是丢数据，不是清理。
+        while (TemporaryCount > Capacity)
         {
-            var victim = _inner.LastOrDefault(i => !i.Pinned);
+            var victim = _inner.LastOrDefault(i => i.IsTemporary && !i.Pinned);
             if (victim is null)
             {
                 return;
@@ -268,5 +279,27 @@ public sealed class ShelfService
 
             _inner.Remove(victim);
         }
+    }
+
+    /// <summary>临时区条目数（工作区条目不计入上限）。</summary>
+    public int TemporaryCount => _inner.Count(i => i.IsTemporary);
+
+    /// <summary>
+    /// 把条目移到指定分组；<paramref name="groupId"/> 传 null 即移回临时区（FR-60）。
+    ///
+    /// 移回临时区**会**触发一次 <see cref="Trim"/>：临时区是有上限的，移回来可能立刻挤掉最旧的未钉住项。
+    /// 这是"临时区"语义的一部分，不是 bug，但调用方最好先告知用户条数。
+    /// </summary>
+    public bool MoveToGroup(ShelfItem item, string? groupId)
+    {
+        if (item.GroupId == groupId)
+        {
+            return false;
+        }
+
+        item.GroupId = groupId;
+        Trim();
+        Changed?.Invoke();
+        return true;
     }
 }

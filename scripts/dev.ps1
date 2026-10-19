@@ -29,7 +29,11 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
 New-Item -ItemType Directory -Force -Path $env:DOTNET_CLI_HOME, $env:NUGET_PACKAGES | Out-Null
 
+# Order matters: check the real SDK locations before Program Files, because
+# "C:\Program Files\dotnet" may hold the runtime only (no sdk/ directory),
+# which makes "dotnet build" fail with "No .NET SDKs were found".
 $candidates = @(
+    'D:\SDK-install\dotnet\dotnet.exe',
     (Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet\dotnet.exe'),
     (Join-Path ${env:ProgramFiles} 'dotnet\dotnet.exe')
 )

@@ -23,7 +23,7 @@ public class PersistenceTests
         var settings = new ShelfSettings { Capacity = 5, TimeToLiveHours = 48, WatchDownloads = true };
 
         var json = ShelfStateCodec.Serialize(items, settings);
-        var (loaded, loadedSettings) = ShelfStateCodec.DeserializeSnapshot(json);
+        var (loaded, _, loadedSettings) = ShelfStateCodec.DeserializeSnapshot(json);
 
         Assert.Equal(2, loaded.Count);
         Assert.Equal("甲.docx", loaded[0].DisplayName);
@@ -61,7 +61,7 @@ public class PersistenceTests
 
         try
         {
-            var (items, settings) = store.LoadSnapshot();
+            var (items, _, settings) = store.LoadSnapshot();
             Assert.Empty(items);
             Assert.Equal(9, settings.Capacity);
         }

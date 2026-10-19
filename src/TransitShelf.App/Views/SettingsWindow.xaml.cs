@@ -50,8 +50,7 @@ public partial class SettingsWindow : Window
             WatchWeChatBox.IsChecked = settings.WatchWeChat;
             RefreshPaletteButtons(settings.Palette);
 
-            // 工作区还没实现：说清楚是"开发中"，而不是让用户以为开了就有（FR-75 分期）。
-            WorkspaceNote.Text = "界面开发中，本轮只落盘开关；分组与钉入在下一阶段实现。";
+            WorkspaceNote.Text = "启用后可分组长期保存；关闭只隐藏入口，已有分组和条目会保留。";
         }
         finally
         {
@@ -151,7 +150,7 @@ public partial class SettingsWindow : Window
 
         _owner.SetClearOnExit(ClearOnExitBox.IsChecked == true);
         Hint(ClearOnExitBox.IsChecked == true
-            ? "退出时会清空未钉住的条目（钉住的保留）。"
+            ? "退出时清空临时区未钉住项；钉住项和工作区保留。"
             : "退出时不清空，条目留到下次启动。");
     }
 
@@ -164,7 +163,7 @@ public partial class SettingsWindow : Window
 
         _owner.SetEnableWorkspace(EnableWorkspaceBox.IsChecked == true);
         Hint(EnableWorkspaceBox.IsChecked == true
-            ? "已启用工作区，界面将在下一阶段完成后出现。"
+            ? "已启用工作区，可在主面板顶部切换。"
             : "已关闭工作区，回到单临时区模式。");
     }
 

@@ -61,60 +61,11 @@ public partial class App : Application
     /// </summary>
     private void CreateTrayIcon(ShelfWindow window)
     {
+        // 菜单内容统一由 ShelfContextMenu 构建：托盘、悬浮球、面板三处共用同一套动作，
+        // 避免加一项要改三处（见该类注释）。托盘额外带上「显示/收起」——
+        // 它是"面板被盖住或已收起"时唯一的兜底入口。
         var menu = new System.Windows.Forms.ContextMenuStrip();
-        menu.Items.Add("收录剪贴板内容", null, (_, _) => window.CollectFromClipboard());
-        menu.Items.Add("添加文件…", null, (_, _) => window.AddFilesFromDialog());
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-
-        // 自动收录开关（默认关闭，见红线 R6）
-        var watchDownloads = new System.Windows.Forms.ToolStripMenuItem("自动收录下载目录")
-        {
-            CheckOnClick = true,
-            Checked = window.Settings.WatchDownloads,
-        };
-        watchDownloads.CheckedChanged += (_, _) => window.SetWatchDownloads(watchDownloads.Checked);
-
-        var watchWeChat = new System.Windows.Forms.ToolStripMenuItem("自动收录微信接收目录")
-        {
-            CheckOnClick = true,
-            Checked = window.Settings.WatchWeChat,
-        };
-        watchWeChat.CheckedChanged += (_, _) => window.SetWatchWeChat(watchWeChat.Checked);
-
-        menu.Items.Add(watchDownloads);
-        menu.Items.Add(watchWeChat);
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-
-        // 设置：清理策略、退出清空、工作区开关都收进独立窗口（FR-72 / FR-74 / FR-75）。
-        // 不做成多层子菜单——设置项会随版本增长，子菜单藏得越深越没人找得到。
-        menu.Items.Add("设置…", null, (_, _) => window.ShowSettings());
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-
-        // 配色（FR-73）：一条"切换到 X"的条目，直接写出目标方案名——
-        // 之前做成下级菜单，用户根本找不到（实机反馈）。
-        var paletteToggle = new System.Windows.Forms.ToolStripMenuItem();
-
-        void RefreshPaletteToggle()
-        {
-            var active = PaletteService.Normalize(window.Settings.Palette);
-            paletteToggle.Text = "切换配色：" + PaletteService.DisplayName(PaletteService.Next(active));
-            paletteToggle.ToolTipText = "当前：" + PaletteService.DisplayName(active);
-        }
-
-        paletteToggle.Click += (_, _) =>
-        {
-            window.ApplyPalette(PaletteService.Next(window.Settings.Palette));
-            RefreshPaletteToggle();
-        };
-        RefreshPaletteToggle();
-        menu.Items.Add(paletteToggle);
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-
-        menu.Items.Add("显示中转站", null, (_, _) => window.ShowPanel());
-        menu.Items.Add("收起", null, (_, _) => window.CollapsePanel());
-        menu.Items.Add("清空临时区", null, (_, _) => window.ClearAll());
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-        menu.Items.Add("退出", null, (_, _) => Shutdown());
+        ShelfActions.AppendTo(menu, window, includePanelVisibility: true);
 
         _tray = new System.Windows.Forms.NotifyIcon
         {

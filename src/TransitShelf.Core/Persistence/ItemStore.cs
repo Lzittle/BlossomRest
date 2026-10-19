@@ -22,27 +22,30 @@ public sealed class ItemStore
     public IReadOnlyList<ShelfItem> Load()
         => LoadSnapshot().Items;
 
-    /// <summary>读取条目与设置；文件缺失或损坏时返回空集合与默认设置。</summary>
-    public (IReadOnlyList<ShelfItem> Items, ShelfSettings Settings) LoadSnapshot()
+    /// <summary>读取条目、分组与设置；文件缺失或损坏时返回空集合与默认设置。</summary>
+    public (IReadOnlyList<ShelfItem> Items, IReadOnlyList<ShelfGroup> Groups, ShelfSettings Settings) LoadSnapshot()
     {
         try
         {
             if (!File.Exists(_filePath))
             {
-                return ([], new ShelfSettings());
+                return ([], [], new ShelfSettings());
             }
 
             return ShelfStateCodec.DeserializeSnapshot(File.ReadAllText(_filePath, Encoding.UTF8));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            return ([], new ShelfSettings());
+            return ([], [], new ShelfSettings());
         }
     }
 
-    public void Save(IEnumerable<ShelfItem> items) => Save(items, new ShelfSettings());
+    public void Save(IEnumerable<ShelfItem> items) => Save(items, [], new ShelfSettings());
 
     public void Save(IEnumerable<ShelfItem> items, ShelfSettings settings)
+        => Save(items, [], settings);
+
+    public void Save(IEnumerable<ShelfItem> items, IEnumerable<ShelfGroup> groups, ShelfSettings settings)
     {
         var directory = Path.GetDirectoryName(_filePath);
         if (!string.IsNullOrEmpty(directory))
@@ -51,7 +54,10 @@ public sealed class ItemStore
         }
 
         var temporaryPath = _filePath + ".tmp";
-        File.WriteAllText(temporaryPath, ShelfStateCodec.Serialize(items, settings), Encoding.UTF8);
+        File.WriteAllText(
+            temporaryPath,
+            ShelfStateCodec.SerializeSnapshot(items, groups, settings),
+            Encoding.UTF8);
         File.Move(temporaryPath, _filePath, overwrite: true);
     }
 }

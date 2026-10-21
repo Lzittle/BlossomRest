@@ -101,29 +101,34 @@
           <TextBlock x:Name="PanelTitle" Text="中转站" FontSize="13" FontWeight="SemiBold"
                      Foreground="{DynamicResource PrimaryTextBrush}"
                      VerticalAlignment="Center" Visibility="Collapsed" />
-          <StackPanel x:Name="HeaderActions" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="收录" Style="{StaticResource TextButton}" Click="OnCollectClick"
-                    ToolTip="把剪贴板里的文字、文件或图片收进来（Ctrl+Alt+C）" />
-            <Button Content="添加" Style="{StaticResource TextButton}" Click="OnAddFilesClick"
-                    ToolTip="选择一个或多个文件加入中转站" />
-            <Button x:Name="MultiSelectButton" Content="多选" Style="{StaticResource TextButton}"
-                    Click="OnMultiSelectClick"
-                    ToolTip="勾选多条，一次复制成换行分隔的路径清单" />
-            <Button x:Name="ClearButton" Content="清空" Style="{StaticResource TextButton}" Click="OnClearClick" />
-            <Button Content="收起" Style="{StaticResource TextButton}" Click="OnCollapseClick" />
-          </StackPanel>
+          <Border HorizontalAlignment="Right" Background="{DynamicResource SurfaceElevatedBrush}"
+                  BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                  CornerRadius="8" Padding="3,2">
+            <Grid>
+              <StackPanel x:Name="HeaderActions" Orientation="Horizontal">
+                <Button Content="收录" Style="{StaticResource TextButton}" Click="OnCollectClick"
+                        ToolTip="把剪贴板里的文字、文件或图片收进来（Ctrl+Alt+C）" />
+                <Button Content="添加" Style="{StaticResource TextButton}" Click="OnAddFilesClick"
+                        ToolTip="选择一个或多个文件加入中转站" />
+                <Button x:Name="MultiSelectButton" Content="多选" Style="{StaticResource TextButton}"
+                        Click="OnMultiSelectClick"
+                        ToolTip="勾选多条，一次复制成换行分隔的路径清单" />
+                <Button x:Name="ClearButton" Content="清空" Style="{StaticResource TextButton}" Click="OnClearClick" />
+                <Button Content="收起" Style="{StaticResource TextButton}" Click="OnCollapseClick" />
+              </StackPanel>
 
-          <!-- 批量操作条：进入多选后替换头部按钮，位置与高度不变 -->
-          <StackPanel x:Name="BatchBar" Orientation="Horizontal" HorizontalAlignment="Right"
-                      Visibility="Collapsed">
-            <TextBlock x:Name="BatchCountText" Text="已选 0 项" FontSize="11" VerticalAlignment="Center"
-                       Margin="0,0,4,0" Foreground="{DynamicResource AccentBrush}" />
-            <Button x:Name="BatchSelectAllButton" Content="全选" Style="{StaticResource TextButton}"
-                    Click="OnBatchSelectAllClick" />
-            <Button Content="复制所选内容" Style="{StaticResource TextButton}" Click="OnBatchCopyPathsClick"
-                    ToolTip="文件可粘贴为附件，文字与路径会按顺序保留" />
-            <Button Content="完成" Style="{StaticResource TextButton}" Click="OnBatchExitClick" />
-          </StackPanel>
+              <!-- 批量操作条：进入多选后替换头部按钮，位置与高度不变 -->
+              <StackPanel x:Name="BatchBar" Orientation="Horizontal" Visibility="Collapsed">
+                <TextBlock x:Name="BatchCountText" Text="已选 0 项" FontSize="11" VerticalAlignment="Center"
+                           Margin="0,0,4,0" Foreground="{DynamicResource AccentBrush}" />
+                <Button x:Name="BatchSelectAllButton" Content="全选" Style="{StaticResource TextButton}"
+                        Click="OnBatchSelectAllClick" />
+                <Button Content="复制所选内容" Style="{StaticResource TextButton}" Click="OnBatchCopyPathsClick"
+                        ToolTip="文件可粘贴为附件，文字与路径会按顺序保留" />
+                <Button Content="完成" Style="{StaticResource TextButton}" Click="OnBatchExitClick" />
+              </StackPanel>
+            </Grid>
+          </Border>
         </Grid>
 
         <Grid x:Name="FilterBar" Grid.Row="3" Margin="12,0,12,6">
@@ -131,11 +136,23 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
           </Grid.ColumnDefinitions>
-          <TextBox x:Name="SearchBox" Style="{StaticResource NumberBox}" Width="Auto" Height="28"
-                   Margin="0,0,8,0" ToolTip="按显示名、路径或文字内容搜索"
-                   TextChanged="OnSearchTextChanged" AutomationProperties.Name="搜索条目" />
+          <Grid Margin="0,0,8,0">
+            <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Width="Auto"
+                     ToolTip="按显示名、路径或文字内容搜索"
+                     TextChanged="OnSearchTextChanged"
+                     PreviewMouseLeftButtonDown="OnSearchBoxPreviewMouseDown"
+                     LostKeyboardFocus="OnSearchBoxLostKeyboardFocus"
+                     AutomationProperties.Name="搜索条目" />
+            <Path Width="16" Height="16" Margin="10,0,0,0" HorizontalAlignment="Left"
+                  Style="{StaticResource IconBase}" Data="{StaticResource IconSearch}"
+                  Stroke="{DynamicResource SecondaryTextBrush}" IsHitTestVisible="False" />
+            <TextBlock x:Name="SearchPlaceholder" Margin="30,0,10,0" HorizontalAlignment="Left"
+                       VerticalAlignment="Center" Text="搜索名称、路径或文字"
+                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
+                       Opacity="0.78" IsHitTestVisible="False" />
+          </Grid>
           <Button x:Name="FilterTypeButton" Grid.Column="1" Content="全部类型"
-                  Style="{StaticResource TextButton}" Click="OnFilterTypeClick"
+                  Style="{StaticResource FilterButton}" Click="OnFilterTypeClick"
                   ToolTip="按条目类型筛选" AutomationProperties.Name="类型筛选" />
         </Grid>
 

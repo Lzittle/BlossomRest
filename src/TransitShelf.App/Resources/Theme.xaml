@@ -117,6 +117,44 @@
     </Setter>
   </Style>
 
+  <!-- 搜索框：比数字输入框更宽、更轻，左侧预留搜索图标。 -->
+  <Style x:Key="SearchBox" TargetType="TextBox" BasedOn="{StaticResource NumberBox}">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="30,0,10,0" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
+  </Style>
+
+  <!-- 类型筛选按钮：让当前筛选成为一个明确的轻量控件，而不是裸文字。 -->
+  <Style x:Key="FilterButton" TargetType="Button">
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bd" CornerRadius="8" Background="{DynamicResource SurfaceElevatedBrush}"
+                  BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}" />
+              <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectedBrush}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!--
     列表滚动条自绘（技术框架设计 8.8）。
 

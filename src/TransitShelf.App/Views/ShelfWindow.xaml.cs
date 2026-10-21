@@ -555,6 +555,13 @@ public partial class ShelfWindow : Window
 
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
     {
+        if (SearchPlaceholder is not null)
+        {
+            SearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(SearchBox.Text)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
         if (!_itemViewReady)
         {
             return;
@@ -563,6 +570,27 @@ public partial class ShelfWindow : Window
         _searchQuery = SearchBox.Text;
         RefreshItemFilter();
     }
+
+    private void OnSearchBoxPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+
+        // 浮窗默认带 WS_EX_NOACTIVATE，保证平时不打断当前应用；搜索是显式输入动作，
+        // 这里只在用户点入搜索框时临时允许激活，失去键盘焦点后再恢复原行为。
+        NativeMethods.SetActivatable(_hwnd, true);
+        NativeMethods.BringToForeground(_hwnd);
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+        {
+            SearchBox.Focus();
+            SearchBox.CaretIndex = SearchBox.Text.Length;
+        }));
+    }
+
+    private void OnSearchBoxLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) =>
+        NativeMethods.SetActivatable(_hwnd, false);
 
     private void OnFilterTypeClick(object sender, RoutedEventArgs e)
     {

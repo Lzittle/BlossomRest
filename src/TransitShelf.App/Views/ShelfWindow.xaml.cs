@@ -94,6 +94,11 @@ public partial class ShelfWindow : Window
     /// </summary>
     private bool _multiSelect;
 
+    // FR-44：筛选是当前视图状态，不写入 state.json，也不改变条目排序。
+    private string _searchQuery = string.Empty;
+    private ShelfFilterKind _filterKind = ShelfFilterKind.All;
+    private bool _itemViewReady;
+
     public ShelfWindow()
     {
         InitializeComponent();
@@ -152,12 +157,15 @@ public partial class ShelfWindow : Window
         _clockTimer.Tick += (_, _) => _shelf.RefreshTimeLabels();
 
         _itemView = CollectionViewSource.GetDefaultView(_shelf.Items);
-        _itemView.Filter = value => value is ShelfItem item && IsCurrentItem(item);
+        _itemView.Filter = value => value is ShelfItem item
+            && IsCurrentItem(item)
+            && ShelfItemFilter.Matches(item, _searchQuery, _filterKind);
         _workspace.Changed += OnWorkspaceChanged;
         _shelf.Changed += RefreshWorkspace;
         _shelf.Changed += ScheduleSave;
         ItemList.ItemsSource = _itemView;
         ItemList.SelectionChanged += (_, _) => UpdateBatchBar();
+        _itemViewReady = true;
 
         SourceInitialized += OnSourceInitialized;
         Closed += OnClosed;
@@ -526,15 +534,76 @@ public partial class ShelfWindow : Window
 
     private void RefreshFooter()
     {
-        var count = CurrentItems.Count();
+        var scopeCount = CurrentItems.Count();
+        var visibleCount = _itemView.Cast<object>().OfType<ShelfItem>().Count();
         CountText.Text = _shelf.Items.Count.ToString();
-        FooterText.Text = _workspaceActive ? $"{count} 条 · 长期保留" : $"{count} / {_shelf.Capacity} 条";
-        EmptyState.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        ItemList.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        var filtered = scopeCount > 0 && visibleCount == 0;
+        if (filtered)
+        {
+            EmptyHint.Text = "没有匹配的条目。\n试试修改搜索词或类型筛选。";
+        }
+
+        FooterText.Text = _workspaceActive
+            ? visibleCount == scopeCount ? $"{scopeCount} 条 · 长期保留" : $"{visibleCount} / {scopeCount} 条 · 长期保留"
+            : visibleCount == scopeCount ? $"{scopeCount} / {_shelf.Capacity} 条" : $"{visibleCount} / {scopeCount} 条 · 上限 {_shelf.Capacity}";
+        EmptyState.Visibility = visibleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ItemList.Visibility = visibleCount == 0 ? Visibility.Collapsed : Visibility.Visible;
 
         // 空列表没有可勾选的对象，直接不给进多选（否则会出现一个没有任何内容可选的操作条）。
-        MultiSelectButton.IsEnabled = count > 0;
+        MultiSelectButton.IsEnabled = visibleCount > 0;
     }
+
+    private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!_itemViewReady)
+        {
+            return;
+        }
+
+        _searchQuery = SearchBox.Text;
+        RefreshItemFilter();
+    }
+
+    private void OnFilterTypeClick(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu();
+        foreach (var kind in Enum.GetValues<ShelfFilterKind>())
+        {
+            var choice = new MenuItem
+            {
+                Header = FilterKindLabel(kind),
+                IsCheckable = true,
+                IsChecked = kind == _filterKind,
+            };
+            choice.Click += (_, _) => SetFilterKind(kind);
+            menu.Items.Add(choice);
+        }
+
+        ShowMenu(menu, FilterTypeButton);
+    }
+
+    private void SetFilterKind(ShelfFilterKind kind)
+    {
+        _filterKind = kind;
+        FilterTypeButton.Content = FilterKindLabel(kind);
+        RefreshItemFilter();
+    }
+
+    private void RefreshItemFilter()
+    {
+        _itemView.Refresh();
+        RefreshFooter();
+        UpdateBatchBar();
+    }
+
+    private static string FilterKindLabel(ShelfFilterKind kind) => kind switch
+    {
+        ShelfFilterKind.File => "文件",
+        ShelfFilterKind.Folder => "文件夹",
+        ShelfFilterKind.Image => "图片",
+        ShelfFilterKind.Text => "文字",
+        _ => "全部类型",
+    };
 
     /// <summary>启动时恢复上次的条目：刷新失效状态、丢弃过期项、清理孤儿缓存（FR-41 / FR-45）。</summary>
     private void LoadState()

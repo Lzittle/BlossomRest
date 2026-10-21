@@ -98,9 +98,14 @@
         </Grid>
 
         <Grid Grid.Row="2" Margin="8,10,8,6">
-          <TextBlock x:Name="PanelTitle" Text="中转站" FontSize="13" FontWeight="SemiBold"
-                     Foreground="{DynamicResource PrimaryTextBrush}"
-                     VerticalAlignment="Center" Visibility="Collapsed" />
+          <StackPanel x:Name="PanelContext" Orientation="Horizontal" VerticalAlignment="Center"
+                      ToolTip="当前查看区域">
+            <Path Width="16" Height="16" Margin="0,0,6,0" Style="{StaticResource IconBase}"
+                  Data="{StaticResource IconShelf}" Stroke="{DynamicResource AccentBrush}" />
+            <TextBlock x:Name="PanelTitle" Text="临时区" FontSize="12" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryTextBrush}"
+                       VerticalAlignment="Center" />
+          </StackPanel>
           <Border HorizontalAlignment="Right" Background="{DynamicResource SurfaceElevatedBrush}"
                   BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
                   CornerRadius="8" Padding="3,2">

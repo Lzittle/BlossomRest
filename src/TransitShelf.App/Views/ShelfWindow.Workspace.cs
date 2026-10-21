@@ -39,6 +39,10 @@ public partial class ShelfWindow
         MarkTab(TemporaryTab, !_workspaceActive);
         MarkTab(WorkspaceTab, _workspaceActive);
         var group = _workspace.Find(_selectedGroupId);
+        PanelTitle.Text = _workspaceActive ? "工作区" : "临时区";
+        PanelContext.ToolTip = _workspaceActive
+            ? $"当前查看：工作区 · {group?.Name ?? "未选择分组"}"
+            : "当前查看：临时区";
         GroupNameText.Text = group?.Name ?? "选择分组";
         GroupPicker.ToolTip = group?.Name ?? "先新建一个分组";
         GroupPicker.IsEnabled = _workspace.Groups.Count > 0;

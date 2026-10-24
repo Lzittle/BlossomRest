@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using TransitShelf.App.Theme;
 using TransitShelf.Core;
 using TransitShelf.Core.Persistence;
@@ -73,14 +74,19 @@ public partial class ShelfWindow : Window
     /// <summary>设置窗口（FR-72 / FR-74 / FR-75）。单实例，反复点托盘不重复开。</summary>
     private Views.SettingsWindow? _settingsWindow;
 
-    // 收起态胶囊的拖动状态。位置只记在本次运行里，重启后回到默认贴边位置（持久化见 PRD FR-05）。
+    // 收起态胶囊的拖动状态。拖动过程使用物理像素，松开后保存位置（FR-05）。
     private bool _pillPressed;
     private bool _pillDragging;
     private Point _pillPressPoint;
-    private double _pillPressLeft;
-    private double _pillPressTop;
-    private double? _customLeft;
-    private double? _customTop;
+    private int _pillPressLeftPx;
+    private int _pillPressTopPx;
+    private int _pillPressWidthPx;
+    private int _pillPressHeightPx;
+    private int? _customLeftPx;
+    private int? _customTopPx;
+    private string? _customMonitor;
+    private bool _layoutApplying;
+    private bool _layoutRefreshPending;
 
     /// <summary>
     /// 是否由"悬浮"触发展开。只有悬浮展开才在鼠标移出后自动收起；
@@ -191,6 +197,10 @@ public partial class ShelfWindow : Window
             source.AddHook(WndProc);
         }
 
+        SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+        // 构造阶段没有 HWND，位置只能先用 WPF 默认值；窗口建立后按保存的物理坐标恢复。
+        ApplyLayout();
+
         _topmostTimer.Start();
         Status(toggleOk && collectOk
             ? $"{PaletteService.DisplayName(_settings.Palette)} · Ctrl+Alt+D 唤出 · Ctrl+Alt+C 收录"
@@ -213,12 +223,19 @@ public partial class ShelfWindow : Window
         SaveState();
         _watcher.Stop();
         _topmostTimer.Stop();
+        SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
         NativeMethods.UnregisterHotKeyById(_hwnd, HotKeyToggleId);
         NativeMethods.UnregisterHotKeyById(_hwnd, HotKeyCollectId);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (msg == NativeMethods.WmDisplayChange || msg == NativeMethods.WmDpiChanged)
+        {
+            ScheduleDisplayLayout();
+            return IntPtr.Zero;
+        }
+
         if (msg != NativeMethods.WmHotKey)
         {
             return IntPtr.Zero;
@@ -239,6 +256,23 @@ public partial class ShelfWindow : Window
         }
 
         return IntPtr.Zero;
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e) => ScheduleDisplayLayout();
+
+    private void ScheduleDisplayLayout()
+    {
+        if (_layoutRefreshPending || Dispatcher.HasShutdownStarted)
+        {
+            return;
+        }
+
+        _layoutRefreshPending = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+        {
+            _layoutRefreshPending = false;
+            ApplyLayout();
+        }));
     }
 
     /// <summary>托盘/悬浮球右键菜单调用：面板当前是否处于展开态（决定「显示/收起」两项谁是可用的）。</summary>
@@ -451,45 +485,153 @@ public partial class ShelfWindow : Window
 
     private void ApplyLayout()
     {
-        var work = SystemParameters.WorkArea;
         var panelWidth = _workspaceActive ? 320 : ExpandedWidth;
         var panelHeight = _workspaceActive ? 520 : ExpandedHeight;
 
-        if (_expanded)
+        if (_layoutApplying)
         {
-            Width = panelWidth;
-            Height = panelHeight;
-            // 展开态用约等于系统圆角的圆角（透明窗口下系统不再代劳，见 XAML 顶部说明）
-            RootBorder.CornerRadius = new CornerRadius(ExpandedCornerRadius);
-            PillPanel.Visibility = Visibility.Collapsed;
-            PanelRoot.Visibility = Visibility.Visible;
-            Left = work.Right - panelWidth - EdgeMargin;
-            Top = work.Bottom - panelHeight - EdgeMargin;
+            return;
+        }
 
-            // 胶囊被拖动过时，面板贴着胶囊展开，而不是跳回右下角
-            if (_customLeft is { } customLeft && _customTop is { } customTop)
+        _layoutApplying = true;
+        try
+        {
+            if (_expanded)
             {
-                Left = Math.Clamp(customLeft + CollapsedSize - panelWidth, work.Left, work.Right - panelWidth);
-                Top = Math.Clamp(customTop + CollapsedSize - panelHeight, work.Top, work.Bottom - panelHeight);
+                Width = panelWidth;
+                Height = panelHeight;
+                // 展开态用约等于系统圆角的圆角（透明窗口下系统不再代劳，见 XAML 顶部说明）
+                RootBorder.CornerRadius = new CornerRadius(ExpandedCornerRadius);
+                PillPanel.Visibility = Visibility.Collapsed;
+                PanelRoot.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                Width = CollapsedSize;
+                Height = CollapsedSize;
+                // 收起态 = 正圆：64×64 取半径 32
+                RootBorder.CornerRadius = new CornerRadius(CollapsedSize / 2);
+                PanelRoot.Visibility = Visibility.Collapsed;
+                PillPanel.Visibility = Visibility.Visible;
+            }
+
+            if (_hwnd == IntPtr.Zero)
+            {
+                // SourceInitialized 之前只能先给 WPF 一个可见的主屏默认值；建立 HWND 后会立即用物理坐标重排。
+                var work = SystemParameters.WorkArea;
+                var width = _expanded ? panelWidth : CollapsedSize;
+                var height = _expanded ? panelHeight : CollapsedSize;
+                Left = work.Right - width - EdgeMargin;
+                Top = work.Bottom - height - EdgeMargin;
+                return;
+            }
+
+            UpdateLayout();
+            ApplyNativePlacement();
+        }
+        finally
+        {
+            _layoutApplying = false;
+        }
+    }
+
+    private void ApplyNativePlacement()
+    {
+        if (!NativeMethods.TryGetWindowRect(_hwnd, out var current))
+        {
+            return;
+        }
+
+        var screen = ResolvePlacementScreen();
+        var work = screen.WorkingArea;
+        var targetLeft = work.Right - current.Width - ToPhysical(EdgeMargin);
+        var targetTop = work.Bottom - current.Height - ToPhysical(EdgeMargin);
+
+        if (_customLeftPx is { } savedLeft && _customTopPx is { } savedTop)
+        {
+            // 先放到目标显示器的可见工作区，触发 WPF 的 WM_DPICHANGED；
+            // 随后按新 DPI 的实际尺寸再裁一次。显示器拔除时也不会先闪到旧的屏幕外坐标。
+            var initialAnchor = DisplayPlacement.ClampToWorkArea(
+                savedLeft,
+                savedTop,
+                current.Width,
+                current.Height,
+                work.Left,
+                work.Top,
+                work.Right,
+                work.Bottom);
+            NativeMethods.TryMoveWindowNoActivate(_hwnd, initialAnchor.Left, initialAnchor.Top);
+            NativeMethods.TryGetWindowRect(_hwnd, out current);
+
+            var dpi = NativeMethods.GetWindowDpi(_hwnd);
+            var pillSize = (int)Math.Round(CollapsedSize * dpi / 96d);
+            var anchor = DisplayPlacement.ClampToWorkArea(
+                savedLeft,
+                savedTop,
+                pillSize,
+                pillSize,
+                work.Left,
+                work.Top,
+                work.Right,
+                work.Bottom);
+            savedLeft = anchor.Left;
+            savedTop = anchor.Top;
+            _customLeftPx = savedLeft;
+            _customTopPx = savedTop;
+            _customMonitor = screen.DeviceName;
+
+            if (_expanded)
+            {
+                targetLeft = savedLeft + pillSize - current.Width;
+                targetTop = savedTop + pillSize - current.Height;
+            }
+            else
+            {
+                targetLeft = savedLeft;
+                targetTop = savedTop;
             }
         }
-        else
-        {
-            Width = CollapsedSize;
-            Height = CollapsedSize;
-            // 收起态 = 正圆：64×64 取半径 32
-            RootBorder.CornerRadius = new CornerRadius(CollapsedSize / 2);
-            PanelRoot.Visibility = Visibility.Collapsed;
-            PillPanel.Visibility = Visibility.Visible;
-            Left = work.Right - CollapsedSize - EdgeMargin;
-            Top = work.Bottom - CollapsedSize - 80;
 
-            if (_customLeft is { } customLeft2 && _customTop is { } customTop2)
+        var clamped = DisplayPlacement.ClampToWorkArea(
+            targetLeft,
+            targetTop,
+            current.Width,
+            current.Height,
+            work.Left,
+            work.Top,
+            work.Right,
+            work.Bottom);
+        NativeMethods.TryMoveWindowNoActivate(_hwnd, clamped.Left, clamped.Top);
+
+        if (_customLeftPx is not null && _customTopPx is not null)
+        {
+            // 显示器被拔掉或工作区缩小时，上面的锚点已修正到当前显示器，关闭时一并落盘。
+            _customMonitor = screen.DeviceName;
+        }
+    }
+
+    private System.Windows.Forms.Screen ResolvePlacementScreen()
+    {
+        if (!string.IsNullOrWhiteSpace(_customMonitor))
+        {
+            var saved = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(screen =>
+                string.Equals(screen.DeviceName, _customMonitor, StringComparison.OrdinalIgnoreCase));
+            if (saved is not null)
             {
-                Left = Math.Clamp(customLeft2, work.Left, work.Right - CollapsedSize);
-                Top = Math.Clamp(customTop2, work.Top, work.Bottom - CollapsedSize);
+                return saved;
             }
         }
+
+        return _hwnd != IntPtr.Zero
+            ? System.Windows.Forms.Screen.FromHandle(_hwnd)
+            : System.Windows.Forms.Screen.PrimaryScreen
+                ?? System.Windows.Forms.Screen.AllScreens.First();
+    }
+
+    private int ToPhysical(double dip)
+    {
+        var dpi = NativeMethods.GetWindowDpi(_hwnd);
+        return (int)Math.Round(dip * dpi / 96d);
     }
 
     private void SetExpanded(bool expanded)
@@ -642,6 +784,9 @@ public partial class ShelfWindow : Window
 
             var (items, groups, settings) = _store.LoadSnapshot();
             _settings = settings;
+            _customMonitor = settings.WindowMonitor;
+            _customLeftPx = settings.WindowLeftPx;
+            _customTopPx = settings.WindowTopPx;
             _workspace.LoadFrom(groups);
             // 分组缺失时保住引用，不能让它在不可见区域消失或被临时区清理。
             foreach (var item in items.Where(item => item.GroupId is not null && _workspace.Find(item.GroupId) is null))
@@ -672,6 +817,7 @@ public partial class ShelfWindow : Window
             AppPaths.CleanOrphanCache(_shelf.Items.Select(item => item.CachePath));
             RefreshWorkspace();
             ApplyWatching();
+            ApplyLayout();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -689,6 +835,13 @@ public partial class ShelfWindow : Window
     {
         try
         {
+            if (_customLeftPx is { } left && _customTopPx is { } top)
+            {
+                _settings.WindowLeftPx = left;
+                _settings.WindowTopPx = top;
+                _settings.WindowMonitor = _customMonitor;
+            }
+
             _store.Save(_shelf.Items, _workspace.Groups, _settings);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -737,8 +890,20 @@ public partial class ShelfWindow : Window
         _pillPressed = true;
         _pillDragging = false;
         _pillPressPoint = PointToScreen(e.GetPosition(this));
-        _pillPressLeft = Left;
-        _pillPressTop = Top;
+        if (NativeMethods.TryGetWindowRect(_hwnd, out var rect))
+        {
+            _pillPressLeftPx = rect.Left;
+            _pillPressTopPx = rect.Top;
+            _pillPressWidthPx = rect.Width;
+            _pillPressHeightPx = rect.Height;
+        }
+        else
+        {
+            _pillPressLeftPx = (int)Math.Round(_pillPressPoint.X);
+            _pillPressTopPx = (int)Math.Round(_pillPressPoint.Y);
+            _pillPressWidthPx = (int)Math.Round(CollapsedSize);
+            _pillPressHeightPx = (int)Math.Round(CollapsedSize);
+        }
         PillPanel.CaptureMouse();
     }
 
@@ -758,10 +923,36 @@ public partial class ShelfWindow : Window
         }
 
         _pillDragging = true;
-        var dpi = VisualTreeHelper.GetDpi(this);
-        var work = SystemParameters.WorkArea;
-        Left = Math.Clamp(_pillPressLeft + dx / dpi.DpiScaleX, work.Left, work.Right - Width);
-        Top = Math.Clamp(_pillPressTop + dy / dpi.DpiScaleY, work.Top, work.Bottom - Height);
+        var desiredLeft = _pillPressLeftPx + (int)Math.Round(dx);
+        var desiredTop = _pillPressTopPx + (int)Math.Round(dy);
+        var center = new System.Drawing.Point(
+            desiredLeft + _pillPressWidthPx / 2,
+            desiredTop + _pillPressHeightPx / 2);
+        var screen = System.Windows.Forms.Screen.FromPoint(center);
+        var work = screen.WorkingArea;
+        var clamped = DisplayPlacement.ClampToWorkArea(
+            desiredLeft,
+            desiredTop,
+            _pillPressWidthPx,
+            _pillPressHeightPx,
+            work.Left,
+            work.Top,
+            work.Right,
+            work.Bottom);
+
+        if (_hwnd != IntPtr.Zero)
+        {
+            NativeMethods.TryMoveWindowNoActivate(_hwnd, clamped.Left, clamped.Top);
+        }
+        else
+        {
+            Left = clamped.Left;
+            Top = clamped.Top;
+        }
+
+        _customLeftPx = clamped.Left;
+        _customTopPx = clamped.Top;
+        _customMonitor = screen.DeviceName;
     }
 
     private void OnPillClick(object sender, MouseButtonEventArgs e)
@@ -776,8 +967,7 @@ public partial class ShelfWindow : Window
         {
             // 拖过就不当点击，否则一松手就展开
             _pillDragging = false;
-            _customLeft = Left;
-            _customTop = Top;
+            ScheduleSave();
             return;
         }
 

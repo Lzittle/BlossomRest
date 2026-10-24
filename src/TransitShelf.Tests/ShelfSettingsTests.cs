@@ -118,6 +118,24 @@ public class ShelfSettingsTests
         Assert.True(loaded.EnableWorkspace);
     }
 
+    [Fact]
+    public void 浮窗位置能按显示器与物理坐标往返序列化()
+    {
+        var settings = new ShelfSettings
+        {
+            WindowMonitor = @"\\.\DISPLAY2",
+            WindowLeftPx = 1920,
+            WindowTopPx = 840,
+        };
+
+        var json = TransitShelf.Core.Persistence.ShelfStateCodec.Serialize([], settings);
+        var (_, _, loaded) = TransitShelf.Core.Persistence.ShelfStateCodec.DeserializeSnapshot(json);
+
+        Assert.Equal(@"\\.\DISPLAY2", loaded.WindowMonitor);
+        Assert.Equal(1920, loaded.WindowLeftPx);
+        Assert.Equal(840, loaded.WindowTopPx);
+    }
+
     /// <summary>
     /// 旧版 state.json 里没有 clearOnExit / enableWorkspace 字段（2026-10-08 之前）。
     /// 反序列化必须让它们取到属性默认值，而不是留在 CLR 默认的 false 之外出现别的行为——

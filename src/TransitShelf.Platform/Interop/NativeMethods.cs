@@ -69,10 +69,13 @@ public static class NativeMethods
     private static readonly IntPtr HWND_TOPMOST = new(-1);
     private const uint SWP_NOSIZE = 0x0001;
     private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_NOACTIVATE = 0x0010;
 
     // RegisterHotKey（user32.dll）：全局快捷键。
     public const int WmHotKey = 0x0312;
+    public const int WmDisplayChange = 0x007E;
+    public const int WmDpiChanged = 0x02E0;
     public const uint ModAlt = 0x0001;
     public const uint ModControl = 0x0002;
     public const uint ModNoRepeat = 0x4000;
@@ -88,6 +91,24 @@ public static class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WindowRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+
+        public int Width => Right - Left;
+        public int Height => Bottom - Top;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetWindowRect(IntPtr hWnd, out WindowRect rect);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hWnd);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint virtualKey);
@@ -238,6 +259,36 @@ public static class NativeMethods
         // WPF 可能在样式变化时重写扩展样式，这里顺带把我们的三个样式位补回去。
         ApplyNonActivatingToolWindow(hwnd);
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    /// <summary>读取窗口在虚拟屏幕中的物理像素矩形（Per-Monitor V2）。</summary>
+    public static bool TryGetWindowRect(IntPtr hwnd, out WindowRect rect)
+    {
+        rect = default;
+        return hwnd != IntPtr.Zero && GetWindowRect(hwnd, out rect);
+    }
+
+    /// <summary>读取窗口当前所在显示器的有效 DPI；旧系统或无效句柄回退 96。</summary>
+    public static uint GetWindowDpi(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            return 96;
+        }
+
+        var dpi = GetDpiForWindow(hwnd);
+        return dpi == 0 ? 96u : dpi;
+    }
+
+    /// <summary>
+    /// 用物理像素移动窗口，保留置顶顺序且不激活它。
+    /// 位置恢复与拖动都走这条路径，避免 WPF DIP 坐标在跨 DPI 显示器时漂移。
+    /// </summary>
+    public static bool TryMoveWindowNoActivate(IntPtr hwnd, int left, int top)
+    {
+        return hwnd != IntPtr.Zero
+            && SetWindowPos(hwnd, IntPtr.Zero, left, top, 0, 0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
 
     /// <summary>注册全局快捷键。被占用时返回 false，不抛异常。</summary>

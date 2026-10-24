@@ -53,6 +53,18 @@ public sealed class ShelfSettings
     /// </summary>
     public string Palette { get; set; } = "Frappe";
 
+    /// <summary>
+    /// 收起胶囊上次停留的显示器设备名（FR-05）。设备名只用于找回显示器，
+    /// 不把显示器分辨率或 DPI 当成永久配置；显示器拔掉后会回退到当前可用屏幕。
+    /// </summary>
+    public string? WindowMonitor { get; set; }
+
+    /// <summary>收起胶囊左上角的物理像素坐标（FR-05）。</summary>
+    public int? WindowLeftPx { get; set; }
+
+    /// <summary>收起胶囊左上角的物理像素坐标（FR-05）。</summary>
+    public int? WindowTopPx { get; set; }
+
     /// <summary>实际生效的过期时长：用户可能手填越界值，这里兜底。</summary>
     public TimeSpan TimeToLive => TimeSpan.FromHours(Math.Clamp(TimeToLiveHours, TimeToLiveHoursMin, TimeToLiveHoursMax));
 

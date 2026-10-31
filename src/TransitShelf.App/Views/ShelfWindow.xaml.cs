@@ -983,10 +983,11 @@ public partial class ShelfWindow : Window
         }
     }
 
-    private void Status(string message)
+    private void Status(string message, int seconds = 3)
     {
         StatusText.Text = message;
         _statusTimer.Stop();
+        _statusTimer.Interval = TimeSpan.FromSeconds(seconds);
         _statusTimer.Start();
     }
 
@@ -1568,7 +1569,20 @@ public partial class ShelfWindow : Window
         CollectFromClipboard();
     }
 
-    private void OnAddFilesClick(object sender, RoutedEventArgs e) => AddFilesFromDialog();
+    /// <summary>「添加」按钮：文件与文件夹是两种系统选择框，先让用户选类型。</summary>
+    private void OnAddMenuClick(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu();
+        var files = new MenuItem { Header = "添加文件…" };
+        files.Click += (_, _) => AddFilesFromDialog();
+        menu.Items.Add(files);
+
+        var folder = new MenuItem { Header = "添加文件夹…" };
+        folder.Click += (_, _) => AddFolderFromDialog();
+        menu.Items.Add(folder);
+
+        ShowMenu(menu, (FrameworkElement)sender);
+    }
 
     // ── 多选与批量操作（FR-21）────────────────────────────────────
 
@@ -1656,11 +1670,19 @@ public partial class ShelfWindow : Window
         }
 
         var textCount = selected.Count(item => item.Kind == ItemKind.Text);
+
+        // 混合内容同时挂了文件与文字两种格式，但目标应用通常只取一种（微信只收文件）。
+        // 这不是复制失败，必须明说，否则用户会以为文字丢了。提示多留几秒。
+        if (paths.Count > 0 && textCount > 0)
+        {
+            Status($"已复制 {paths.Count} 条路径 + {textCount} 条文字；微信等应用只接收文件，"
+                + "文字需取消勾选文件后单独复制", 8);
+            return;
+        }
+
         Status(paths.Count == 0
             ? $"已复制 {textCount} 条文字，去目标处 Ctrl+V"
-            : textCount == 0
-                ? $"已复制 {paths.Count} 条路径，去目标处 Ctrl+V"
-                : $"已复制 {paths.Count} 条路径和 {textCount} 条文字，去目标处 Ctrl+V");
+            : $"已复制 {paths.Count} 条路径，去目标处 Ctrl+V");
     }
 
     private void UpdateBatchBar()
@@ -1754,6 +1776,47 @@ public partial class ShelfWindow : Window
         }
 
         Status(added > 0 ? $"已收录 {added} 项" : "剪贴板里没有可收录的内容");
+    }
+
+    /// <summary>
+    /// 手动选择文件夹加入（FR-14）。与文件走同一个 <see cref="ShelfService.AddFile"/>：
+    /// 文件夹条目同样只存路径，零拷贝。
+    /// </summary>
+    public void AddFolderFromDialog()
+    {
+        if (!CanCollectInCurrentScope()) return;
+
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "添加文件夹到中转站",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = false,
+        };
+
+        // 与文件选择框同一套前后台处理：对话框被浮窗挡住会看起来像卡死。
+        NativeMethods.SetActivatable(_hwnd, true);
+        NativeMethods.BringToForeground(_hwnd);
+
+        System.Windows.Forms.DialogResult result;
+        try
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            result = dialog.ShowDialog();
+            Diagnostics.LogSlow("打开文件夹选择框", watch.Elapsed);
+        }
+        finally
+        {
+            NativeMethods.SetActivatable(_hwnd, false);
+            NativeMethods.ReassertTopmost(_hwnd);
+        }
+
+        if (result != System.Windows.Forms.DialogResult.OK || string.IsNullOrWhiteSpace(dialog.SelectedPath))
+        {
+            return;
+        }
+
+        _shelf.AddFile(dialog.SelectedPath, CurrentGroupId);
+        Status("已添加文件夹");
     }
 
     /// <summary>手动选择文件加入（FR-14）。</summary>

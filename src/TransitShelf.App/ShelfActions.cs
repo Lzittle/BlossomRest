@@ -50,6 +50,7 @@ internal static class ShelfActions
         {
             new("收录剪贴板内容", () => window.CollectFromClipboard()),
             new("添加文件…", () => window.AddFilesFromDialog()),
+            new("添加文件夹…", () => window.AddFolderFromDialog()),
             MenuItemSpec.Separator,
 
             // 自动收录开关（默认关闭，见红线 R6）。勾选态每次展开时重取，

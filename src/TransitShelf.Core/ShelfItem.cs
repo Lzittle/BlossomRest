@@ -48,6 +48,8 @@ public sealed class ShelfItem : INotifyPropertyChanged
 
             _path = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(ThumbnailPath));
+            OnPropertyChanged(nameof(HasThumbnail));
         }
     }
 
@@ -121,6 +123,12 @@ public sealed class ShelfItem : INotifyPropertyChanged
 
     /// <summary>无源图片的缓存 PNG 路径；其余类型为 null。</summary>
     public string? CachePath { get; init; }
+
+    /// <summary>缩略图读取的路径：无源图片取缓存 PNG，其余取源文件（FR-52）。</summary>
+    public string? ThumbnailPath => CachePath ?? Path;
+
+    /// <summary>是否可能显示缩略图（图片与视频）。实际解码失败时界面回退到类型图标。</summary>
+    public bool HasThumbnail => ItemPreview.SupportsThumbnail(ThumbnailPath);
 
     /// <summary>源文件是否仍然存在（见 <see cref="RefreshState"/>）。</summary>
     public ItemState State

@@ -1,6 +1,7 @@
 <Window x:Class="TransitShelf.App.Views.ShelfWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:TransitShelf.App.Views"
         Title="中转站"
         Width="300" Height="400"
         WindowStyle="None" ResizeMode="NoResize"
@@ -308,26 +309,57 @@
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
 
-                  <!-- 条目类型图标：几何体按 Kind 切换，颜色统一走主色令牌 -->
-                  <Path Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center"
-                        Stroke="{DynamicResource AccentBrush}">
-                    <Path.Style>
-                      <Style TargetType="Path" BasedOn="{StaticResource IconBase}">
-                        <Setter Property="Data" Value="{StaticResource IconFile}" />
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding Kind}" Value="Folder">
-                            <Setter Property="Data" Value="{StaticResource IconFolder}" />
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding Kind}" Value="Text">
-                            <Setter Property="Data" Value="{StaticResource IconText}" />
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding IsImage}" Value="True">
-                            <Setter Property="Data" Value="{StaticResource IconImage}" />
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </Path.Style>
-                  </Path>
+                  <!-- 条目缩略图（FR-52）：图片与视频显示真实缩略图，其余类型仍用矢量图标 -->
+                  <Grid Grid.Column="0" Width="32" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Path HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Stroke="{DynamicResource AccentBrush}">
+                      <Path.Style>
+                        <Style TargetType="Path" BasedOn="{StaticResource IconBase}">
+                          <Setter Property="Data" Value="{StaticResource IconFile}" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding Kind}" Value="Folder">
+                              <Setter Property="Data" Value="{StaticResource IconFolder}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Kind}" Value="Text">
+                              <Setter Property="Data" Value="{StaticResource IconText}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsImage}" Value="True">
+                              <Setter Property="Data" Value="{StaticResource IconImage}" />
+                            </DataTrigger>
+                            <!-- 有缩略图就隐藏图标，避免两者叠在一起；失效条目保留图标作为兜底 -->
+                            <MultiDataTrigger>
+                              <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding HasThumbnail}" Value="True" />
+                                <Condition Binding="{Binding IsMissing}" Value="False" />
+                              </MultiDataTrigger.Conditions>
+                              <Setter Property="Visibility" Value="Collapsed" />
+                            </MultiDataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Path.Style>
+                    </Path>
+
+                    <!-- 默认折叠必须写在样式里：元素上的本地值会盖过触发器，那样缩略图永远不出现 -->
+                    <Border CornerRadius="4" ClipToBounds="True"
+                            Background="{DynamicResource SupportFillBrush}">
+                      <Border.Style>
+                        <Style TargetType="Border">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                          <Style.Triggers>
+                            <MultiDataTrigger>
+                              <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding HasThumbnail}" Value="True" />
+                                <Condition Binding="{Binding IsMissing}" Value="False" />
+                              </MultiDataTrigger.Conditions>
+                              <Setter Property="Visibility" Value="Visible" />
+                            </MultiDataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <views:ThumbnailImage Width="32" Height="32"
+                                           SourcePath="{Binding ThumbnailPath, Mode=OneWay}" />
+                    </Border>
+                  </Grid>
 
                   <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding DisplayName}" FontSize="13" TextTrimming="CharacterEllipsis"

@@ -53,8 +53,8 @@ public sealed class ShelfSettings
     public List<string> ExtraWatchDirectories { get; set; } = [];
 
     /// <summary>
-    /// 配色方案名（见 App 层 PaletteService：Frappe / RosePineDawn）。
-    /// 这里只存名字，不认识配色本身——Core 不依赖任何界面资源。
+    /// 配色选择（见 App 层 PaletteService：Frappe / RosePineDawn / System）。
+    /// 这里只存名字，不认识配色本身——Core 不依赖任何界面资源；System 由 App 层按系统主题解析。
     /// </summary>
     public string Palette { get; set; } = "Frappe";
 

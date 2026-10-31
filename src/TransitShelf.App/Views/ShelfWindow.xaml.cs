@@ -56,6 +56,9 @@ public partial class ShelfWindow : Window
     private readonly DispatcherTimer _topmostTimer;
     private readonly DispatcherTimer _saveTimer;
     private readonly DispatcherTimer _clockTimer;
+
+    /// <summary>「跟随系统」配色下轮询系统主题（FR-73）；非跟随模式时保持停止。</summary>
+    private readonly DispatcherTimer _themeTimer;
     private const int HotKeyToggleId = 0x5453;   // "TS"
     private const int HotKeyCollectId = 0x5454;  // "TT"
     private static readonly uint HotKeyToggleKey = 0x44;  // D
@@ -163,6 +166,11 @@ public partial class ShelfWindow : Window
         _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
         _clockTimer.Tick += (_, _) => _shelf.RefreshTimeLabels();
 
+        // 系统主题心跳：Windows 没有稳定的浅色/深色切换通知，跟随系统时用低频轮询兜底。
+        // 只在「跟随系统」模式运行（见 UpdateThemeWatcher），5 秒读一次注册表的开销可以忽略。
+        _themeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _themeTimer.Tick += (_, _) => SyncSystemTheme();
+
         _itemView = CollectionViewSource.GetDefaultView(_shelf.Items);
         _itemView.Filter = value => value is ShelfItem item
             && IsCurrentItem(item)
@@ -212,6 +220,7 @@ public partial class ShelfWindow : Window
     {
         _saveTimer.Stop();
         _clockTimer.Stop();
+        _themeTimer.Stop();
 
         // FR-74 退出清空：必须**先清后存**。
         // 反过来的话会把刚清掉的条目写进 state.json，下次启动又原样回来——开关等于没开。
@@ -518,14 +527,54 @@ public partial class ShelfWindow : Window
     /// <summary>
     /// 切换配色（FR-73）。整套颜色都在 Palettes/ 的字典里，这里只换字典 + 记下选择。
     /// 托盘菜单调用它，所以改完立刻落盘，重启后仍是这一套。
+    ///
+    /// 「跟随系统」记录的是一种**选择**而不是某一套颜色：实际应用的是系统当前对应的那套，
+    /// 之后由 <see cref="SyncSystemTheme"/> 在系统主题变化时自动跟上。
     /// </summary>
     public void ApplyPalette(string name)
     {
         var target = PaletteService.Normalize(name);
         PaletteService.Apply(target);
         _settings.Palette = target;
+        UpdateThemeWatcher();
         ScheduleSave();
         Status($"配色：{PaletteService.DisplayName(target)}");
+    }
+
+    /// <summary>按当前配色设置启停系统主题轮询：只有「跟随系统」才需要一直监听。</summary>
+    private void UpdateThemeWatcher()
+    {
+        if (PaletteService.Normalize(_settings.Palette) == PaletteService.System)
+        {
+            _themeTimer.Start();
+        }
+        else
+        {
+            _themeTimer.Stop();
+        }
+    }
+
+    /// <summary>
+    /// 「跟随系统」下系统深浅色切换后自动换配色。只在解析结果与当前生效配色不同时动作，
+    /// 因此轮询本身不会反复重刷界面；切换是用户主动改设置时的正常反馈，给一句状态提示。
+    /// </summary>
+    private void SyncSystemTheme()
+    {
+        if (PaletteService.Normalize(_settings.Palette) != PaletteService.System)
+        {
+            // 兜底：配置已在别处改成固定配色，这里不必再轮询。
+            _themeTimer.Stop();
+            return;
+        }
+
+        var resolved = PaletteService.Resolve(PaletteService.System);
+        if (resolved == PaletteService.Current)
+        {
+            return;
+        }
+
+        PaletteService.Apply(PaletteService.System);
+        Status($"已跟随系统切换为 {PaletteService.DisplayName(resolved)}");
     }
 
     /// <summary>按当前设置重启目录监听。</summary>
@@ -879,7 +928,9 @@ public partial class ShelfWindow : Window
             _shelf.Capacity = settings.SafeCapacity;
 
             // 配色先于界面内容应用：设置文件里的名字可能已过期，Normalize 会收敛到已知方案。
+            // 「跟随系统」会读系统主题选出实际字典；随后按选择启停主题轮询（FR-73）。
             PaletteService.Apply(settings.Palette);
+            UpdateThemeWatcher();
 
             if (items.Count > 0)
             {

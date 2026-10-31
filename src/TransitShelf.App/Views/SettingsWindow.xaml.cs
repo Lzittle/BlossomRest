@@ -234,6 +234,7 @@ public partial class SettingsWindow : Window
         var active = PaletteService.Normalize(current);
         FrappeButton.FontWeight = active == PaletteService.Frappe ? FontWeights.SemiBold : FontWeights.Normal;
         DawnButton.FontWeight = active == PaletteService.RosePineDawn ? FontWeights.SemiBold : FontWeights.Normal;
+        SystemButton.FontWeight = active == PaletteService.System ? FontWeights.SemiBold : FontWeights.Normal;
     }
 
     // ── 单击行为（FR-70）────────────────────────────────────────────

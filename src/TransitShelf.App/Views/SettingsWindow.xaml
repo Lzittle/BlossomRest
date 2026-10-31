@@ -202,7 +202,7 @@
                           Checked="OnEnableWorkspaceChanged" Unchecked="OnEnableWorkspaceChanged" />
               </Grid>
 
-              <!-- 配色：两个选项做成小按钮组，比下拉更好点、也不会误选 -->
+              <!-- 配色：三个选项做成小按钮组，比下拉更好点、也不会误选 -->
               <Grid Margin="0,12,0,0">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" />
@@ -211,7 +211,7 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                   <TextBlock Text="配色" FontSize="12"
                              Foreground="{DynamicResource PrimaryTextBrush}" />
-                  <TextBlock Text="深色适合常驻，浅色适合白天与投屏。"
+                  <TextBlock Text="深色适合常驻，浅色适合白天与投屏；跟随系统会随 Windows 主题自动切换。"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              TextWrapping="Wrap" />
@@ -220,6 +220,8 @@
                   <Button x:Name="FrappeButton" Content="深色" Tag="Frappe"
                           Style="{StaticResource TextButton}" Click="OnPaletteClick" />
                   <Button x:Name="DawnButton" Content="浅色" Tag="RosePineDawn"
+                          Style="{StaticResource TextButton}" Click="OnPaletteClick" />
+                  <Button x:Name="SystemButton" Content="跟随系统" Tag="System"
                           Style="{StaticResource TextButton}" Click="OnPaletteClick" />
                 </StackPanel>
               </Grid>

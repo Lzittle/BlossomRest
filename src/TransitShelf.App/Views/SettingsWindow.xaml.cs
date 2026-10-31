@@ -5,6 +5,7 @@ using System.Windows.Input;
 using TransitShelf.App.Theme;
 using TransitShelf.Core;
 using TransitShelf.Core.Settings;
+using TransitShelf.Platform;
 
 namespace TransitShelf.App.Views;
 
@@ -46,6 +47,8 @@ public partial class SettingsWindow : Window
             RangeHint.Text = $"合法区间：上限 {ShelfSettings.CapacityMin}～{ShelfSettings.CapacityMax} 项，"
                            + $"时长 {ShelfSettings.TimeToLiveHoursMin}～{ShelfSettings.TimeToLiveHoursMax} 小时。超出会自动修正。";
             ClearOnExitBox.IsChecked = settings.ClearOnExit;
+            // 自启状态来自注册表而不是 state.json：用户在系统设置里关掉后，这里要如实显示关。
+            StartWithWindowsBox.IsChecked = StartupService.IsEnabled();
             EnableWorkspaceBox.IsChecked = settings.EnableWorkspace;
             WatchDownloadsBox.IsChecked = settings.WatchDownloads;
             WatchWeChatBox.IsChecked = settings.WatchWeChat;
@@ -154,6 +157,32 @@ public partial class SettingsWindow : Window
         Hint(ClearOnExitBox.IsChecked == true
             ? "退出时清空临时区未钉住项；钉住项和工作区保留。"
             : "退出时不清空，条目留到下次启动。");
+    }
+
+    /// <summary>
+    /// 开机自启（FR-73）。开关的最终状态以注册表为准：
+    /// 写入失败（安全软件拦截 / 组策略）时把开关回填成真实状态，不能让界面说一套、系统里是另一套。
+    /// </summary>
+    private void OnStartWithWindowsChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading)
+        {
+            return;
+        }
+
+        var enabled = StartWithWindowsBox.IsChecked == true;
+        if (!_owner.SetStartWithWindows(enabled))
+        {
+            _loading = true;
+            StartWithWindowsBox.IsChecked = StartupService.IsEnabled();
+            _loading = false;
+            Hint("写入启动项失败，可能被安全软件或组策略拦截。");
+            return;
+        }
+
+        Hint(enabled
+            ? "已登记开机自启；可在系统「设置 → 应用 → 启动」中查看。"
+            : "已取消开机自启。");
     }
 
     private void OnEnableWorkspaceChanged(object sender, RoutedEventArgs e)

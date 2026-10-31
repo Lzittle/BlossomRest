@@ -478,6 +478,23 @@ public partial class ShelfWindow : Window
         Status(enabled ? "已启用工作区" : "已关闭工作区，回到单临时区模式");
     }
 
+    /// <summary>
+    /// 开机自启（FR-73）。**状态由注册表而不是 state.json 决定**：用户在 Windows
+    /// 「设置 → 应用 → 启动」里关掉后，这里必须跟着显示关，不能拿本地配置把它偷偷开回来。
+    /// 返回是否写入成功，调用方据此回填开关。
+    /// </summary>
+    public bool SetStartWithWindows(bool enabled)
+    {
+        var exePath = Environment.ProcessPath;
+        var succeeded = enabled ? StartupService.Enable(exePath) : StartupService.Disable();
+
+        Status(succeeded
+            ? (enabled ? "已开启开机自启" : "已取消开机自启")
+            : "更新开机自启失败，可能被安全软件或组策略拦截");
+
+        return succeeded;
+    }
+
     /// <summary>打开设置窗口（FR-72 / FR-74 / FR-75）。托盘菜单「设置…」调用它。</summary>
     public void ShowSettings()
     {

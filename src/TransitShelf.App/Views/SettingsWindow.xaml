@@ -140,6 +140,37 @@
             </StackPanel>
           </Border>
 
+          <!-- 分组：启动（FR-73） -->
+          <Border CornerRadius="8" BorderThickness="1" Padding="14,12" Margin="0,10,0,0"
+                  Background="{DynamicResource SurfaceElevatedBrush}"
+                  BorderBrush="{DynamicResource StrokeBrush}">
+            <StackPanel>
+              <TextBlock Text="启动" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource PrimaryTextBrush}" />
+              <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="开机自启" FontSize="12"
+                             Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <!--
+                    状态以注册表为准：这里说明"可在系统里关"，而不是暗示只能在本程序里改。
+                    用户从系统设置关掉后，本开关会跟着显示为关。
+                  -->
+                  <TextBlock Text="登录 Windows 后自动启动并收成悬浮球。系统「设置 → 应用 → 启动」里能看到同一项，也能在那边关闭。"
+                             FontSize="11" Margin="0,2,0,0"
+                             Foreground="{DynamicResource SecondaryTextBrush}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1" x:Name="StartWithWindowsBox"
+                          Style="{StaticResource ToggleSwitch}"
+                          Checked="OnStartWithWindowsChanged" Unchecked="OnStartWithWindowsChanged" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
           <!-- 分组三：界面（FR-75 / FR-73） -->
           <Border CornerRadius="8" BorderThickness="1" Padding="14,12" Margin="0,10,0,0"
                   Background="{DynamicResource SurfaceElevatedBrush}"

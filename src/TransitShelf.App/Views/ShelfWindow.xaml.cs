@@ -1661,17 +1661,29 @@ public partial class ShelfWindow : Window
             return;
         }
 
-        var copied = _clipboard.CopyMixed(paths, content);
+        var textCount = selected.Count(item => item.Kind == ItemKind.Text);
+
+        // 文字 + 图片时额外生成 RTF：Word/WPS/邮件能一次粘出图文。
+        // 聊天类应用仍只会取文件或文字，所以下面仍然要给出两段式提示。
+        var richText = textCount > 0 && RichTextClipboardBuilder.HasImage(selected)
+            ? RichTextClipboardBuilder.Build(selected)
+            : null;
+
+        var copied = _clipboard.CopyMixed(paths, content, richText);
 
         if (!copied)
         {
-        Status("复制失败，请重试（剪贴板可能被其他程序占用）");
+            Status("复制失败，请重试（剪贴板可能被其他程序占用）");
             return;
         }
 
-        var textCount = selected.Count(item => item.Kind == ItemKind.Text);
+        if (richText is not null)
+        {
+            Status("已复制图文：Word/WPS/邮件可一次粘贴；微信用「复制文字」再粘一次", 8);
+            return;
+        }
 
-        // 混合内容同时挂了文件与文字两种格式，但目标应用通常只取一种（微信只收文件）。
+        // 没有图片时，混合内容同时挂了文件与文字两种格式，但目标应用通常只取一种。
         // 这不是复制失败，必须明说，否则用户会以为文字丢了。提示多留几秒。
         if (paths.Count > 0 && textCount > 0)
         {
@@ -1683,6 +1695,30 @@ public partial class ShelfWindow : Window
         Status(paths.Count == 0
             ? $"已复制 {textCount} 条文字，去目标处 Ctrl+V"
             : $"已复制 {paths.Count} 条路径，去目标处 Ctrl+V");
+    }
+
+    /// <summary>只复制勾选项里的文字（FR-21）：聊天窗口先粘文件、再粘文字，两次 Ctrl+V。</summary>
+    private void OnBatchCopyTextClick(object sender, RoutedEventArgs e)
+    {
+        var selected = CurrentItems.Where(item => ItemList.SelectedItems.Contains(item)).ToList();
+        var textItems = selected
+            .Where(item => item.Kind == ItemKind.Text && !string.IsNullOrWhiteSpace(item.Text))
+            .ToList();
+
+        if (textItems.Count == 0)
+        {
+            Status("勾选的条目里没有文字");
+            return;
+        }
+
+        var content = string.Join(Environment.NewLine, textItems.Select(item => item.Text));
+        if (!_clipboard.CopyText(content))
+        {
+            Status("复制失败，请重试（剪贴板可能被其他程序占用）");
+            return;
+        }
+
+        Status($"已复制 {textItems.Count} 条文字，去目标处 Ctrl+V", 5);
     }
 
     private void UpdateBatchBar()

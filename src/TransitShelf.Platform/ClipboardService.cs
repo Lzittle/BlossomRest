@@ -63,10 +63,11 @@ public sealed class ClipboardService
     }
 
     /// <summary>
-    /// 同时复制文件和文字。剪贴板保留 CF_HDROP 与 UnicodeText 两种格式，
-    /// 目标应用按自己支持的格式读取：资源管理器/微信可拿到文件，AI 会话可拿到完整文本。
+    /// 同时复制文件和文字，图文混合时可再附加 RTF 富文本。剪贴板保留
+    /// CF_HDROP / UnicodeText / Rich Text Format 多种格式，目标应用按能力自取：
+    /// 资源管理器/微信拿文件，AI 会话拿文本，Word/WPS/邮件拿图文。
     /// </summary>
-    public bool CopyMixed(IReadOnlyList<string> paths, string text)
+    public bool CopyMixed(IReadOnlyList<string> paths, string text, string? richText = null)
     {
         if (paths.Count == 0)
         {
@@ -76,7 +77,7 @@ public sealed class ClipboardService
         var files = paths.ToArray();
         // 混合格式先走 Win32 一次性交付，避免 WPF/OLE 在某些桌面环境下
         // 为 FileDrop + UnicodeText 创建延迟数据对象并长时间占住剪贴板。
-        if (NativeMethods.TrySetClipboardMixed(files, text))
+        if (NativeMethods.TrySetClipboardMixed(files, text, richText))
         {
             return true;
         }

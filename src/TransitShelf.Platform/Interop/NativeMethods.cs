@@ -337,6 +337,7 @@ public static class NativeMethods
     private const uint CF_UNICODETEXT = 13;    // WinUser.h：以 NUL 结尾的 UTF-16 文本
     private const uint CF_HDROP = 15;          // WinUser.h：DROPFILES 头 + 双 NUL 结尾的文件列表
     private const uint GMEM_MOVEABLE = 0x0002; // winbase.h：GlobalAlloc 标志，剪贴板要求可移动内存块
+    private const string RichTextFormatName = "Rich Text Format"; // 注册格式：RTF 富文本（Word / WPS / 邮件）
     private const int ClipboardAttempts = 4;   // 剪贴板可能被别的进程打开，重试几次
     private const int ClipboardRetryDelayMs = 30;
 
@@ -360,6 +361,10 @@ public static class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetClipboardData(uint format, IntPtr memory);
+
+    // RegisterClipboardFormat（user32.dll）：把 "Rich Text Format" 这类字符串格式名换成剪贴板格式号。
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint RegisterClipboardFormat(string formatName);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool CloseClipboard();
@@ -385,13 +390,35 @@ public static class NativeMethods
     public static bool TrySetClipboardText(string text) =>
         TrySetClipboardData(CF_UNICODETEXT, Encoding.Unicode.GetBytes(text + "\0"));
 
-    /// <summary>同时写入文件列表和 Unicode 文本，避免混合多选时丢掉其中一种内容。</summary>
-    public static bool TrySetClipboardMixed(IReadOnlyList<string> paths, string text) =>
-        paths.Count > 0 && TrySetClipboardData(
-        [
+    /// <summary>
+    /// 同时写入文件列表、Unicode 文本与可选的 RTF 富文本。
+    /// 前三者是"按能力取用"：资源管理器/微信取文件，AI 会话取文本，Word/WPS/邮件取 RTF 图文。
+    /// </summary>
+    public static bool TrySetClipboardMixed(IReadOnlyList<string> paths, string text, string? richText = null)
+    {
+        if (paths.Count == 0)
+        {
+            return false;
+        }
+
+        var formats = new List<(uint Format, byte[] Payload)>(3)
+        {
             (CF_HDROP, BuildFileDropBuffer(paths)),
             (CF_UNICODETEXT, Encoding.Unicode.GetBytes(text + "\0")),
-        ]);
+        };
+
+        if (!string.IsNullOrEmpty(richText))
+        {
+            var rtfFormat = RegisterClipboardFormat(RichTextFormatName);
+            if (rtfFormat != 0)
+            {
+                // RTF 生成时已把非 ASCII 转义成 \uN，保持纯 ASCII，避免编码歧义。
+                formats.Add((rtfFormat, Encoding.ASCII.GetBytes(richText)));
+            }
+        }
+
+        return TrySetClipboardData(formats);
+    }
 
     /// <summary>
     /// 组装 CF_HDROP 的内存块：DROPFILES 头 + 每条路径各带一个 NUL + 末尾再补一个 NUL。

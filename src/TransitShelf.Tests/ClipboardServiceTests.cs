@@ -83,6 +83,29 @@ public class ClipboardServiceTests
         }));
     }
 
+    [Fact]
+    public void 混合复制附带RTF富文本()
+    {
+        RunSta(() => WithClipboardPreserved(() =>
+        {
+            var service = new ClipboardService();
+            const string richText = @"{\rtf1\ansi\deff0 {\pict\pngblip\picw1\pich1 00}}";
+
+            AssertClipboardAccepts(() => service.CopyMixed(SamplePaths, "文字", richText), "复制图文");
+
+            Assert.True(ReadClipboard(() => Clipboard.ContainsData("Rich Text Format")));
+            var data = ReadClipboard(() => Clipboard.GetData("Rich Text Format"));
+            var rtf = data switch
+            {
+                string value => value,
+                MemoryStream stream => Encoding.ASCII.GetString(stream.ToArray()),
+                byte[] bytes => Encoding.ASCII.GetString(bytes),
+                _ => string.Empty,
+            };
+            Assert.Contains(@"\pict", rtf);
+        }));
+    }
+
     /// <summary>
     /// 重试到超时为止：剪贴板被别的程序短暂占用是常态，不该判成失败；
     /// 超过窗口仍写不进去，说明这条通道真的坏了（或环境把它长期占住了）。

@@ -27,4 +27,15 @@ public static class ItemPreview
         var extension = Path.GetExtension(path);
         return ImageExtensions.Contains(extension) || VideoExtensions.Contains(extension);
     }
+
+    /// <summary>是否是图片文件（用于图文混排复制；视频与普通文件不算）。</summary>
+    public static bool IsImage(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        return ImageExtensions.Contains(Path.GetExtension(path));
+    }
 }

@@ -51,7 +51,7 @@ public class ClipboardServiceTests
 
             AssertClipboardAccepts(() => service.CopyFiles(SamplePaths), "复制文件");
 
-            var pasted = Clipboard.GetFileDropList().Cast<string>().ToArray();
+            var pasted = ReadClipboard(() => Clipboard.GetFileDropList().Cast<string>().ToArray());
             Assert.Equal(SamplePaths, pasted);
         }));
     }
@@ -63,7 +63,7 @@ public class ClipboardServiceTests
         {
             AssertClipboardAccepts(() => NativeMethods.TrySetClipboardFileDrop(SamplePaths), "写入 CF_HDROP");
 
-            var pasted = Clipboard.GetFileDropList().Cast<string>().ToArray();
+            var pasted = ReadClipboard(() => Clipboard.GetFileDropList().Cast<string>().ToArray());
             Assert.Equal(SamplePaths, pasted);
         }));
     }
@@ -78,8 +78,8 @@ public class ClipboardServiceTests
 
             AssertClipboardAccepts(() => service.CopyMixed(SamplePaths, text), "复制混合内容");
 
-            Assert.Equal(SamplePaths, Clipboard.GetFileDropList().Cast<string>().ToArray());
-            Assert.Equal(text, Clipboard.GetText());
+            Assert.Equal(SamplePaths, ReadClipboard(() => Clipboard.GetFileDropList().Cast<string>().ToArray()));
+            Assert.Equal(text, ReadClipboard(Clipboard.GetText));
         }));
     }
 
@@ -100,6 +100,33 @@ public class ClipboardServiceTests
             Assert.True(
                 Environment.TickCount64 < deadline,
                 $"{what}在 {ClipboardTimeoutMs} ms 内一直失败：剪贴板被其他程序长期占用，或写入通道有问题");
+            Thread.Sleep(150);
+        }
+    }
+
+    /// <summary>
+    /// 读取也要重试：写入成功后，剪贴板的所有权从 OLE 交回系统的一瞬间仍可能被占用，
+    /// 直接读会抛出 <c>CLIPBRD_E_CANT_OPEN</c>。这类失败与写入重试同理，属于环境噪声，
+    /// 不该让「写进去了但读不回来」变成假红灯；超过窗口仍读不到才判失败。
+    /// </summary>
+    private static T ReadClipboard<T>(Func<T> read)
+    {
+        var deadline = Environment.TickCount64 + ClipboardTimeoutMs;
+        Exception? lastFailure = null;
+        while (true)
+        {
+            try
+            {
+                return read();
+            }
+            catch (Exception ex)
+            {
+                lastFailure = ex;
+            }
+
+            Assert.True(
+                Environment.TickCount64 < deadline,
+                $"读取剪贴板在 {ClipboardTimeoutMs} ms 内一直失败：{lastFailure?.Message}");
             Thread.Sleep(150);
         }
     }

@@ -424,6 +424,27 @@ public partial class ShelfWindow : Window
     }
 
     /// <summary>
+    /// 单击行为（FR-70，默认按类型）。改完立即生效：下一次单击就用新规则，不需要重启。
+    /// 只影响单击；双击始终打开，右键菜单的复制 / 打开不受影响。
+    /// </summary>
+    public void SetClickBehavior(ShelfClickBehavior behavior)
+    {
+        if (_settings.ClickBehavior == behavior)
+        {
+            return;
+        }
+
+        _settings.ClickBehavior = behavior;
+        ScheduleSave();
+        Status(behavior switch
+        {
+            ShelfClickBehavior.AlwaysOpen => "单击行为：统一打开",
+            ShelfClickBehavior.AlwaysCopy => "单击行为：统一复制",
+            _ => "单击行为：按类型（文件夹打开，其余复制）",
+        });
+    }
+
+    /// <summary>
     /// 开关：退出时清空未钉住条目（FR-74，默认关闭）。
     ///
     /// 关闭时沿用既有约定"退出不清理、条目留到下次启动"；开启后每次退出都会丢弃现场，
@@ -1226,8 +1247,8 @@ public partial class ShelfWindow : Window
 
         e.Handled = true;
 
-        // 单击主动作：文件夹打开（无"复制内容"语义），其余复制。
-        if (item.Kind == ItemKind.Folder)
+        // 单击主动作（FR-70）：默认按类型——文件夹用于打开，其余复制；设置里可整体统一。
+        if (ClickActionResolver.Resolve(item.Kind, _settings.ClickBehavior) == ClickAction.Open)
         {
             Open(item);
         }

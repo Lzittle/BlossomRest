@@ -192,6 +192,30 @@
                           Style="{StaticResource TextButton}" Click="OnPaletteClick" />
                 </StackPanel>
               </Grid>
+
+              <!-- 单击行为（FR-70）：三个互斥选项，加粗标出当前生效项 -->
+              <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                  <TextBlock Text="单击条目" FontSize="12"
+                             Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Text="默认按类型：文件夹打开，文件、文字、图片复制。双击始终打开。"
+                             FontSize="11" Margin="0,2,0,0"
+                             Foreground="{DynamicResource SecondaryTextBrush}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Button x:Name="ByKindButton" Content="按类型" Tag="ByKind"
+                          Style="{StaticResource TextButton}" Click="OnClickBehaviorClick" />
+                  <Button x:Name="AlwaysOpenButton" Content="统一打开" Tag="AlwaysOpen"
+                          Style="{StaticResource TextButton}" Click="OnClickBehaviorClick" />
+                  <Button x:Name="AlwaysCopyButton" Content="统一复制" Tag="AlwaysCopy"
+                          Style="{StaticResource TextButton}" Click="OnClickBehaviorClick" />
+                </StackPanel>
+              </Grid>
             </StackPanel>
           </Border>
 

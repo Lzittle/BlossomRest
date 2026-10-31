@@ -38,6 +38,11 @@ public sealed class ShelfSettings
     /// </summary>
     public bool EnableWorkspace { get; set; }
 
+    /// <summary>
+    /// 单击条目的整体行为（FR-70，默认按类型）。只影响单击，双击始终打开、右键菜单不受影响。
+    /// </summary>
+    public ShelfClickBehavior ClickBehavior { get; set; } = ShelfClickBehavior.ByKind;
+
     /// <summary>自动收录下载目录。</summary>
     public bool WatchDownloads { get; set; }
 

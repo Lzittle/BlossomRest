@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using TransitShelf.App.Theme;
+using TransitShelf.Core;
 using TransitShelf.Core.Settings;
 
 namespace TransitShelf.App.Views;
@@ -49,6 +50,7 @@ public partial class SettingsWindow : Window
             WatchDownloadsBox.IsChecked = settings.WatchDownloads;
             WatchWeChatBox.IsChecked = settings.WatchWeChat;
             RefreshPaletteButtons(settings.Palette);
+            RefreshClickBehaviorButtons(settings.ClickBehavior);
 
             WorkspaceNote.Text = "启用后可分组长期保存；关闭只隐藏入口，已有分组和条目会保留。";
         }
@@ -203,6 +205,36 @@ public partial class SettingsWindow : Window
         var active = PaletteService.Normalize(current);
         FrappeButton.FontWeight = active == PaletteService.Frappe ? FontWeights.SemiBold : FontWeights.Normal;
         DawnButton.FontWeight = active == PaletteService.RosePineDawn ? FontWeights.SemiBold : FontWeights.Normal;
+    }
+
+    // ── 单击行为（FR-70）────────────────────────────────────────────
+
+    private void OnClickBehaviorClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string name }
+            || !Enum.TryParse<ShelfClickBehavior>(name, out var behavior))
+        {
+            return;
+        }
+
+        _owner.SetClickBehavior(behavior);
+        RefreshClickBehaviorButtons(behavior);
+        Hint(behavior switch
+        {
+            ShelfClickBehavior.AlwaysOpen => "单击任意条目都打开；双击行为不变。",
+            ShelfClickBehavior.AlwaysCopy => "单击任意条目都复制；双击行为不变。",
+            _ => "单击文件夹打开，文件、文字、图片复制。",
+        });
+    }
+
+    /// <summary>
+    /// 与配色按钮同一套标记法：加粗当前项。三个选项互斥，不加选中背景。
+    /// </summary>
+    private void RefreshClickBehaviorButtons(ShelfClickBehavior current)
+    {
+        ByKindButton.FontWeight = current == ShelfClickBehavior.ByKind ? FontWeights.SemiBold : FontWeights.Normal;
+        AlwaysOpenButton.FontWeight = current == ShelfClickBehavior.AlwaysOpen ? FontWeights.SemiBold : FontWeights.Normal;
+        AlwaysCopyButton.FontWeight = current == ShelfClickBehavior.AlwaysCopy ? FontWeights.SemiBold : FontWeights.Normal;
     }
 
     // ── 其他 ──────────────────────────────────────────────────────

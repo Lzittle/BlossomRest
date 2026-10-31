@@ -288,12 +288,16 @@
                                 Stroke="{DynamicResource MenuIconBrush}" />
                         </MenuItem.Icon>
                       </MenuItem>
+                      <MenuItem Header="移动到文件夹…" Tag="MoveToFolder" Click="OnMoveToFolderClick"
+                                ToolTip="把文件或文件夹移到指定目录；同名自动加序号，不覆盖；可撤销" />
                       <MenuItem Header="{Binding PinActionLabel}" Click="OnTogglePinClick" />
                       <MenuItem Header="钉入工作区 / 移动到分组" SubmenuOpened="OnMoveMenuOpened" Tag="WorkspaceMove">
                         <MenuItem Header="选择分组…" />
                       </MenuItem>
                       <Separator />
                       <MenuItem Header="修复乱码名称" Click="OnRepairNameClick" />
+                      <MenuItem Header="建议名称" Tag="NameSuggestion" Click="OnSuggestNameClick"
+                                ToolTip="为哈希或机器生成的名字给出有语义的建议名；只改显示名，不改磁盘文件" />
                       <MenuItem Header="重命名源文件为显示名" Click="OnRenameSourceClick" />
                       <Separator />
                       <MenuItem Header="删除条目" Click="OnDeleteClick">
@@ -453,9 +457,19 @@
           </Grid.RowDefinitions>
           <TextBlock x:Name="FooterText" FontSize="11" VerticalAlignment="Center"
                      Foreground="{DynamicResource SecondaryTextBrush}" />
-          <TextBlock x:Name="StatusText" Grid.Row="1" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
-                     VerticalAlignment="Center"
-                     Foreground="{DynamicResource HighlightBrush}" />
+          <Grid Grid.Row="1" Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                       Foreground="{DynamicResource HighlightBrush}" />
+            <!-- 移动后常驻，状态栏文字消失也不影响撤销（FR-23） -->
+            <Button x:Name="UndoMoveButton" Grid.Column="1" Content="撤销移动"
+                    Style="{StaticResource TextButton}" Visibility="Collapsed"
+                    Click="OnUndoMoveClick"
+                    ToolTip="把刚才移动的文件移回原位置" />
+          </Grid>
         </Grid>
       </Grid>
     </Grid>

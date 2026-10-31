@@ -202,6 +202,19 @@ public partial class ShelfWindow
         if (sender is not ContextMenu menu) return;
         foreach (var entry in menu.Items.OfType<MenuItem>().Where(item => item.Tag as string == "WorkspaceMove"))
             entry.Visibility = _settings.EnableWorkspace ? Visibility.Visible : Visibility.Collapsed;
+
+        // 「移动到文件夹…」只对仍存在的文件 / 文件夹条目有意义（FR-23）。
+        foreach (var entry in menu.Items.OfType<MenuItem>().Where(item => item.Tag as string == "MoveToFolder"))
+            entry.Visibility = menu.DataContext is ShelfItem { Path: not null, IsMissing: false }
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        // 「建议名称」只在显示名明显是机器生成时出现（FR-51）。
+        foreach (var entry in menu.Items.OfType<MenuItem>().Where(item => item.Tag as string == "NameSuggestion"))
+            entry.Visibility = menu.DataContext is ShelfItem candidate
+                               && NameSuggester.HasSuggestion(candidate.Kind, candidate.DisplayName)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private void OnMoveMenuOpened(object sender, RoutedEventArgs e)

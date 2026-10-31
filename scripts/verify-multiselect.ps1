@@ -7,8 +7,8 @@ Setup:  .\scripts\dev.ps1 build   (build first)
 How it works: pushes two files and one text item into the shelf through the collect
 global hotkey (Ctrl+Alt+C = WM_HOTKEY id 0x5454), then drives the real UI through UI
 Automation plus real mouse clicks: enter multi-select, tick every item, click the
-"copy path list" button and compare the clipboard with the expected absolute paths.
-The text item must be skipped.
+"copy selected content" button and compare the clipboard with the expected absolute paths.
+The text item must be preserved in the text payload (FR-21 keeps file drop plus text).
 
 Ticking the items uses real clicks on purpose: UI Automation's SelectionItemPattern
 Select() replaces the previous selection even when the list is in multi-select mode,
@@ -60,11 +60,11 @@ public static IntPtr FindToolWindow(int pid) {
 
 # UI labels, spelled out by code point (see the header note about ASCII-only scripts):
 #   U+591A U+9009 = "multi select"      U+5B8C U+6210 = "done"
-#   U+590D U+5236 U+8DEF U+5F84 U+6E05 U+5355 = "copy path list"
+#   U+590D U+5236 U+6240 U+9009 U+5185 U+5BB9 = "copy selected content"
 #   U+5DF2 U+9009 ... U+9879 = "selected N items"
 #   U+5DF2 U+590D U+5236 = "copied" (status line prefix)
 $labelMultiSelect = -join ([char]0x591A, [char]0x9009)
-$labelCopyPaths = -join ([char]0x590D, [char]0x5236, [char]0x8DEF, [char]0x5F84, [char]0x6E05, [char]0x5355)
+$labelCopyPaths = -join ([char]0x590D, [char]0x5236, [char]0x6240, [char]0x9009, [char]0x5185, [char]0x5BB9)
 $labelDone = -join ([char]0x5B8C, [char]0x6210)
 $countSelectedPrefix = -join ([char]0x5DF2, [char]0x9009)
 $countSelectedSuffix = -join ([char]0x9879)
@@ -233,6 +233,10 @@ if (Test-Path -LiteralPath $backupFile) { Remove-Item -LiteralPath $backupFile -
 if (Test-Path $StateFile) { Copy-Item -LiteralPath $StateFile -Destination $backupFile -Force }
 if (Test-Path $StateFile) { Remove-Item -LiteralPath $StateFile -Force }
 
+# Cached PNG images belong to the current shelf; back them up before the run wipes them.
+$cacheBackup = Join-Path $env:TEMP ('transitshelf-multiselect-cache-' + [Guid]::NewGuid().ToString('n').Substring(0, 8))
+if (Test-Path -LiteralPath $cacheDir) { Copy-Item -LiteralPath $cacheDir -Destination $cacheBackup -Recurse -Force }
+
 # Start from a clean error log so a failure dump points at this run only.
 $errorLog = Join-Path (Split-Path -Parent $StateFile) 'error.log'
 if (Test-Path $errorLog) { Remove-Item -LiteralPath $errorLog -Force }
@@ -286,14 +290,14 @@ try {
     $lines = @($clipboardText -split "`r`n|`n" | Where-Object { $_ -ne '' })
 
     $expected = @($tempOne, $tempTwo)
-    $pathsOk = ($lines.Count -eq 2) -and
+    $pathsOk = ($lines.Count -eq 3) -and
         (@($lines | Where-Object { $expected -contains $_ }).Count -eq 2) -and
-        (@($lines | Where-Object { $_ -notmatch '^[A-Za-z]:\\' }).Count -eq 0) -and
+        ($clipboardText -like "*$chineseText*") -and
         ($clipboardText -notlike '*SENTINEL*')
-    $results.Add('FR-21 clipboard = 2 abs paths   : ' + $(if ($copied -and $pathsOk) { 'PASS' } else { "FAIL -> [$clipboardText]" }))
+    $results.Add('FR-21 clipboard = 2 paths + text : ' + $(if ($copied -and $pathsOk) { 'PASS' } else { "FAIL -> [$clipboardText]" }))
 
-    $textSkipped = -not ($clipboardText -like "*$chineseText*")
-    $results.Add('FR-21 text item skipped         : ' + $(if ($textSkipped) { 'PASS' } else { 'FAIL' }))
+    $textKept = $clipboardText -like "*$chineseText*"
+    $results.Add('FR-21 text item kept in payload : ' + $(if ($textKept) { 'PASS' } else { 'FAIL' }))
 
     $exited = Invoke-Button $panel $labelDone
     Start-Sleep -Milliseconds 300
@@ -332,6 +336,11 @@ foreach ($temp in @($tempOne, $tempTwo)) {
 
 if (Test-Path $cacheDir) {
     Get-ChildItem $cacheDir -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+}
+if (Test-Path -LiteralPath $cacheBackup) {
+    Get-ChildItem -LiteralPath $cacheBackup -File -ErrorAction SilentlyContinue |
+        Copy-Item -Destination $cacheDir -Force
+    Remove-Item -LiteralPath $cacheBackup -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 $results | ForEach-Object { Write-Host $_ }

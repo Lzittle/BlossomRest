@@ -84,15 +84,23 @@ Windows 桌面上一个常驻置顶的小浮窗。把散落在微信接收目录
 
 > 脚本必须保持纯 ASCII：Windows PowerShell 5.1 会把无 BOM 的 UTF-8 脚本按 GBK 读取，中文注释会导致解析失败。
 
-自动验收脚本（需要先构建），覆盖三处必须依赖真实系统交互的功能：
+自动验收脚本（需要先构建），覆盖必须依赖真实系统交互的功能：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-collect.ps1      # 剪贴板收藏
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-watch.ps1        # 目录监听
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-multiselect.ps1  # 多选路径清单
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-smoke.ps1        # 冷启动 / 空闲资源 / 优雅关闭
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-stress.ps1       # 批量引用 / 快速热键 / 崩溃恢复
 ```
 
-当前状态（2026-10-31）：四个项目编译通过、0 警告 0 错误；120 个单元测试全绿。工作区、右键菜单、缩略图、跟随系统配色与多显示器 / 缩放的实机验收仍待完成。
+冒烟与压测脚本请指定 Release 构建：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-smoke.ps1 -Exe .\src\TransitShelf.App\bin\Release\net8.0-windows\TransitShelf.exe
+```
+
+当前状态（2026-10-31）：四个项目编译通过、0 警告 0 错误；124 个单元测试全绿；冒烟与压测脚本通过（冷启动 605 ms、空闲 CPU 0%、99 条批量收录 657 ms、强杀恢复与孤儿缓存清理正常）。内存目标已按实测基线修订为收起空闲私有内存 ≤ 110 MB、收录 100 条增长 ≤ 30 MB（ADR D36）。工作区、右键菜单、缩略图、跟随系统配色与多显示器 / 缩放的实机验收仍待完成。
 
 ## 还没做
 

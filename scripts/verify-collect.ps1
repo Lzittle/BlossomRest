@@ -45,11 +45,58 @@ $chineseText = -join ([char]0x9A8C, [char]0x8BC1, [char]0x6587, [char]0x672C)
 
 $hotKeyCollect = 0x5454
 $cacheDir = Join-Path (Split-Path -Parent $StateFile) 'cache'
+$backupDir = Join-Path $env:TEMP ('transitshelf-collect-' + [Guid]::NewGuid().ToString('n').Substring(0, 8))
+$backupState = Join-Path $backupDir 'state.json'
+$backupCache = Join-Path $backupDir 'cache'
+$hadState = $false
+$hadCache = $false
 $results = New-Object System.Collections.Generic.List[string]
 
 function Stop-App {
     Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Stop-Process -Force
     Start-Sleep -Milliseconds 1200
+}
+
+# The real state.json / cache belong to the user. Back them up before the test
+# writes anything, and put them back afterwards (same contract as verify-smoke).
+function Backup-Data {
+    New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
+    if (Test-Path -LiteralPath $StateFile) {
+        Copy-Item -LiteralPath $StateFile -Destination $backupState -Force -ErrorAction Stop
+        $script:hadState = $true
+    }
+    if (Test-Path -LiteralPath $cacheDir) {
+        Copy-Item -LiteralPath $cacheDir -Destination $backupCache -Recurse -Force -ErrorAction Stop
+        $script:hadCache = $true
+    }
+}
+
+function Restore-Data {
+    Stop-App
+    if ($script:hadState) {
+        for ($attempt = 1; $attempt -le 20; $attempt++) {
+            try {
+                Copy-Item -LiteralPath $backupState -Destination $StateFile -Force -ErrorAction Stop
+                break
+            }
+            catch {
+                Start-Sleep -Milliseconds 300
+            }
+        }
+    }
+    elseif (Test-Path -LiteralPath $StateFile) {
+        Remove-Item -LiteralPath $StateFile -Force -ErrorAction SilentlyContinue
+    }
+
+    if (Test-Path -LiteralPath $cacheDir) {
+        Get-ChildItem -LiteralPath $cacheDir -File -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+    }
+    if ($script:hadCache) {
+        Get-ChildItem -LiteralPath $backupCache -File -ErrorAction SilentlyContinue |
+            Copy-Item -Destination $cacheDir -Force
+    }
+    Remove-Item -LiteralPath $backupDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 function Start-App {
@@ -86,8 +133,9 @@ function Set-ClipboardSafe([scriptblock] $Action) {
 }
 
 Stop-App
-if (Test-Path $StateFile) { Remove-Item -LiteralPath $StateFile -Force }
+Backup-Data
 
+try {
 # ---------- 1. clipboard text (Chinese payload) ----------
 Start-App
 Set-ClipboardSafe { [System.Windows.Forms.Clipboard]::SetText($chineseText) }
@@ -134,12 +182,12 @@ $state = Read-State
 $count = @($state.items).Count
 $results.Add('FR-72 capacity limit = 3          : ' + $(if ($count -eq 3) { "PASS ($count items)" } else { "FAIL ($count items)" }))
 
-# ---------- cleanup ----------
-Stop-App
-if (Test-Path $StateFile) { Remove-Item -LiteralPath $StateFile -Force }
-if (Test-Path $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
-if (Test-Path $cacheDir) {
-    Get-ChildItem $cacheDir -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+}
+finally {
+    if ($tempFile -and (Test-Path -LiteralPath $tempFile)) {
+        Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+    }
+    Restore-Data
 }
 
 $results | ForEach-Object { Write-Host $_ }

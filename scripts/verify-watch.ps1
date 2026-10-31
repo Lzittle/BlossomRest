@@ -18,6 +18,12 @@ param(
 $ErrorActionPreference = 'Stop'
 $results = New-Object System.Collections.Generic.List[string]
 $watchDir = Join-Path $env:TEMP ('transitshelf-watch-' + [Guid]::NewGuid().ToString('n').Substring(0, 8))
+$cacheDir = Join-Path (Split-Path -Parent $StateFile) 'cache'
+$backupDir = Join-Path $env:TEMP ('transitshelf-watch-state-' + [Guid]::NewGuid().ToString('n').Substring(0, 8))
+$backupState = Join-Path $backupDir 'state.json'
+$backupCache = Join-Path $backupDir 'cache'
+$hadState = $false
+$hadCache = $false
 
 function Stop-App {
     Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -35,9 +41,53 @@ function Read-State {
     return (Get-Content $StateFile -Raw -Encoding UTF8 | ConvertFrom-Json)
 }
 
+# The real state.json / cache belong to the user. Back them up before the test
+# writes anything, and put them back afterwards (same contract as verify-smoke).
+function Backup-Data {
+    New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
+    if (Test-Path -LiteralPath $StateFile) {
+        Copy-Item -LiteralPath $StateFile -Destination $backupState -Force -ErrorAction Stop
+        $script:hadState = $true
+    }
+    if (Test-Path -LiteralPath $cacheDir) {
+        Copy-Item -LiteralPath $cacheDir -Destination $backupCache -Recurse -Force -ErrorAction Stop
+        $script:hadCache = $true
+    }
+}
+
+function Restore-Data {
+    Stop-App
+    if ($script:hadState) {
+        for ($attempt = 1; $attempt -le 20; $attempt++) {
+            try {
+                Copy-Item -LiteralPath $backupState -Destination $StateFile -Force -ErrorAction Stop
+                break
+            }
+            catch {
+                Start-Sleep -Milliseconds 300
+            }
+        }
+    }
+    elseif (Test-Path -LiteralPath $StateFile) {
+        Remove-Item -LiteralPath $StateFile -Force -ErrorAction SilentlyContinue
+    }
+
+    if (Test-Path -LiteralPath $cacheDir) {
+        Get-ChildItem -LiteralPath $cacheDir -File -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+    }
+    if ($script:hadCache) {
+        Get-ChildItem -LiteralPath $backupCache -File -ErrorAction SilentlyContinue |
+            Copy-Item -Destination $cacheDir -Force
+    }
+    Remove-Item -LiteralPath $backupDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 Stop-App
 New-Item -ItemType Directory -Force -Path $watchDir | Out-Null
+Backup-Data
 
+try {
 $state = @{
     schemaVersion = 2
     settings = @{
@@ -89,9 +139,13 @@ $state = Read-State
 $kept = @($state.settings.extraWatchDirectories)
 $results.Add('FR-72 watch settings persist      : ' + $(if ($kept -contains $watchDir) { 'PASS' } else { 'FAIL' }))
 
-Stop-App
-if (Test-Path $StateFile) { Remove-Item -LiteralPath $StateFile -Force }
-if (Test-Path $watchDir) { Remove-Item -LiteralPath $watchDir -Recurse -Force }
+}
+finally {
+    Restore-Data
+    if (Test-Path -LiteralPath $watchDir) {
+        Remove-Item -LiteralPath $watchDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 
 $results | ForEach-Object { Write-Host $_ }
 $failed = @($results | Where-Object { $_ -match 'FAIL' }).Count

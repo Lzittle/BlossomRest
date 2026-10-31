@@ -63,6 +63,7 @@ public partial class ShelfWindow : Window
 
     private IntPtr _hwnd;
     private bool _expanded;
+    private bool _pillHidden;
     private bool _clearArmed;
     private bool _clearArmedForWorkspace;
     private string? _clearArmedGroupId;
@@ -278,9 +279,10 @@ public partial class ShelfWindow : Window
     /// <summary>托盘/悬浮球右键菜单调用：面板当前是否处于展开态（决定「显示/收起」两项谁是可用的）。</summary>
     public bool IsPanelExpanded => _expanded;
 
-    /// <summary>托盘菜单 / 快捷键调用：展开并抢回置顶。</summary>
+    /// <summary>托盘菜单 / 快捷键调用：展开并抢回置顶。悬浮球被隐藏时先恢复窗口（FR-09）。</summary>
     public void ShowPanel()
     {
+        RestorePillIfHidden();
         _expandTimer.Stop();
         _collapseTimer.Stop();
         ExpandSticky();
@@ -288,6 +290,48 @@ public partial class ShelfWindow : Window
     }
 
     public void CollapsePanel() => Collapse();
+
+    /// <summary>
+    /// 悬浮球右键「隐藏悬浮球（不退出）」：只隐藏窗口，进程、托盘、快捷键和条目都保留。
+    /// 隐藏状态不落盘，重启后恢复显示，避免用户忘记隐藏而以为程序丢了（FR-09 / ADR D31）。
+    /// </summary>
+    public void HidePill()
+    {
+        if (_pillHidden)
+        {
+            return;
+        }
+
+        _expandTimer.Stop();
+        _collapseTimer.Stop();
+        _pillPressed = false;
+        _pillDragging = false;
+        if (PillPanel.IsMouseCaptured)
+        {
+            PillPanel.ReleaseMouseCapture();
+        }
+
+        _openedByHover = false;
+        if (_expanded)
+        {
+            SetExpanded(false);
+        }
+
+        _pillHidden = true;
+        Hide();
+    }
+
+    /// <summary>托盘 / 快捷键唤回：隐藏过的窗口需要先 Show 才能继续展开。</summary>
+    private void RestorePillIfHidden()
+    {
+        if (!_pillHidden)
+        {
+            return;
+        }
+
+        _pillHidden = false;
+        Show();
+    }
 
     public void ClearAll()
     {
@@ -994,7 +1038,7 @@ public partial class ShelfWindow : Window
         }
 
         _expandTimer.Stop();
-        ShowShelfContextMenu(includePanelVisibility: false);
+        ShowShelfContextMenu(includePanelVisibility: false, includePillHide: true);
         e.Handled = true;
     }
 
@@ -1022,7 +1066,7 @@ public partial class ShelfWindow : Window
     /// ShowActivated=False 的不抢焦点窗口，WinForms 菜单需要宿主已激活才能正常接收消息，
     /// 直接 Show 出来会点不中。动作清单与托盘那一份同源（ShelfActions）。
     /// </summary>
-    private void ShowShelfContextMenu(bool includePanelVisibility)
+    private void ShowShelfContextMenu(bool includePanelVisibility, bool includePillHide = false)
     {
         var menu = new ContextMenu
         {
@@ -1030,7 +1074,7 @@ public partial class ShelfWindow : Window
             Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint,
         };
 
-        foreach (var entry in ShelfActions.ToWpfItems(this, includePanelVisibility))
+        foreach (var entry in ShelfActions.ToWpfItems(this, includePanelVisibility, includePillHide))
         {
             menu.Items.Add(entry);
         }

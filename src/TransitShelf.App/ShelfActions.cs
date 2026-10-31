@@ -37,8 +37,14 @@ internal static class ShelfActions
     /// <paramref name="includePanelVisibility"/> 为 true 时带上「显示中转站 / 收起」——
     /// 只对托盘有意义：托盘是"面板可能被盖住或已收起"时唯一的兜底入口。
     /// 悬浮球（本来就是收起态）与已展开的面板都不需要这两项。
+    ///
+    /// <paramref name="includePillHide"/> 为 true 时带上「隐藏悬浮球（不退出）」——
+    /// 只对悬浮球右键有意义：它是用户显式收起整个悬浮球的入口，进程与托盘保持不变。
     /// </summary>
-    internal static List<MenuItemSpec> Build(ShelfWindow window, bool includePanelVisibility)
+    internal static List<MenuItemSpec> Build(
+        ShelfWindow window,
+        bool includePanelVisibility,
+        bool includePillHide = false)
     {
         var actions = new List<MenuItemSpec>
         {
@@ -72,6 +78,12 @@ internal static class ShelfActions
             actions.Add(new("收起", () => window.CollapsePanel(), IsEnabled: () => window.IsPanelExpanded));
         }
 
+        if (includePillHide)
+        {
+            // 与「退出」分开：这里只隐藏窗口，进程、托盘、快捷键与条目都保留（FR-09 / ADR D31）。
+            actions.Add(new("隐藏悬浮球（不退出）", () => window.HidePill()));
+        }
+
         actions.Add(new("清空临时区", () => window.ClearAll()));
         actions.Add(MenuItemSpec.Separator);
         actions.Add(new("退出", () => Application.Current.Shutdown()));
@@ -86,9 +98,12 @@ internal static class ShelfActions
     }
 
     /// <summary>翻译成 WPF 菜单项（悬浮球 / 面板右键用）。</summary>
-    internal static IEnumerable<object> ToWpfItems(ShelfWindow window, bool includePanelVisibility)
+    internal static IEnumerable<object> ToWpfItems(
+        ShelfWindow window,
+        bool includePanelVisibility,
+        bool includePillHide = false)
     {
-        foreach (var action in Build(window, includePanelVisibility))
+        foreach (var action in Build(window, includePanelVisibility, includePillHide))
         {
             if (action.IsSeparator)
             {
@@ -119,9 +134,10 @@ internal static class ShelfActions
     internal static void AppendTo(
         System.Windows.Forms.ContextMenuStrip menu,
         ShelfWindow window,
-        bool includePanelVisibility)
+        bool includePanelVisibility,
+        bool includePillHide = false)
     {
-        foreach (var action in Build(window, includePanelVisibility))
+        foreach (var action in Build(window, includePanelVisibility, includePillHide))
         {
             if (action.IsSeparator)
             {
@@ -151,7 +167,7 @@ internal static class ShelfActions
         menu.Opening += (_, _) =>
         {
             var items = menu.Items.OfType<System.Windows.Forms.ToolStripMenuItem>().ToList();
-            var source = Build(window, includePanelVisibility)
+            var source = Build(window, includePanelVisibility, includePillHide)
                 .Where(a => !a.IsSeparator)
                 .ToList();
 

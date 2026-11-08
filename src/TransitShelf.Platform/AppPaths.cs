@@ -4,13 +4,27 @@ namespace TransitShelf.Platform;
 
 /// <summary>
 /// 本程序在用户目录下的落盘位置（见技术框架设计 4.2）。
-/// 全部位于 %LOCALAPPDATA% 下的 TransitShelf 目录，删除该目录不影响任何用户原始文件。
+/// 默认位于 %LOCALAPPDATA% 下的 TransitShelf 目录；显式验收配置可重定向到隔离目录。
 /// </summary>
 public static class AppPaths
 {
-    public static string Root { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TransitShelf");
+    public static string Root { get; } = ResolveRoot(Environment.GetEnvironmentVariable("TRANSITSHELF_DATA_ROOT"));
+
+    /// <summary>仅显式验收配置可以重定向；相对路径直接拒绝，防止状态误写到当前目录。</summary>
+    public static string ResolveRoot(string? configuredRoot)
+    {
+        if (string.IsNullOrWhiteSpace(configuredRoot))
+        {
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransitShelf");
+        }
+
+        if (!Path.IsPathFullyQualified(configuredRoot))
+        {
+            throw new ArgumentException("数据目录必须为绝对路径。", nameof(configuredRoot));
+        }
+
+        return Path.GetFullPath(configuredRoot);
+    }
 
     public static string StateFile { get; } = Path.Combine(Root, "state.json");
 

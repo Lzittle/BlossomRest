@@ -20,11 +20,12 @@ check does not destroy whatever is on the shelf right now.
 IMPORTANT: keep this file ASCII-only (see dev.ps1).
 #>
 param(
-    [string] $StateFile = (Join-Path $env:LOCALAPPDATA 'TransitShelf\state.json'),
+    [string] $StateFile,
     [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe')
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'verification-context.ps1')
 
 Add-Type -Namespace Smoke -Name Api -MemberDefinition @'
 public delegate bool EnumProc(IntPtr h, IntPtr l);
@@ -33,6 +34,12 @@ public delegate bool EnumProc(IntPtr h, IntPtr l);
 [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr h, int i);
 [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+[StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
+[DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out Rect r);
+public static string Bounds(IntPtr h) {
+  Rect r; GetWindowRect(h, out r);
+  return (r.Right-r.Left) + "x" + (r.Bottom-r.Top) + " at " + r.Left + "," + r.Top;
+}
 public static IntPtr FindToolWindow(int pid) {
   IntPtr found = IntPtr.Zero;
   EnumWindows(delegate(IntPtr h, IntPtr l) {
@@ -51,7 +58,7 @@ $results = New-Object System.Collections.Generic.List[string]
 
 function Stop-App {
     for ($attempt = 1; $attempt -le 10; $attempt++) {
-        $running = @(Get-Process -Name TransitShelf -ErrorAction SilentlyContinue)
+        $running = @(Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe })
         if ($running.Count -eq 0) {
             Start-Sleep -Milliseconds 1200
             return
@@ -114,7 +121,7 @@ function Restore-Data {
 
 function Start-AppTimed {
     $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
-    $process = Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -PassThru
+    $process = Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden -PassThru
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
     $handle = [IntPtr]::Zero
     while ($watch.ElapsedMilliseconds -lt 15000) {
@@ -167,7 +174,12 @@ try {
     # ---------- 4. idle CPU / memory (NFR-01) ----------
     $process.Refresh()
     $cpu0 = $process.TotalProcessorTime
-    Start-Sleep -Seconds 10
+    Write-Host ('DIAGNOSTIC window bounds: ' + [Smoke.Api]::Bounds($handle))
+    for ($sample = 1; $sample -le 10; $sample++) {
+        Start-Sleep -Seconds 1
+        $process.Refresh()
+        Write-Host ('DIAGNOSTIC private memory t=' + $sample + 's: ' + ('{0:N1}' -f ($process.PrivateMemorySize64 / 1MB)) + ' MB')
+    }
     $process.Refresh()
     $cpu1 = $process.TotalProcessorTime
     $cpuPercent = [math]::Round((($cpu1 - $cpu0).TotalMilliseconds / 10000) / [Environment]::ProcessorCount * 100, 2)

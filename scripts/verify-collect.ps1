@@ -14,11 +14,12 @@ BOM as ANSI (GBK on zh-CN systems) and non-ASCII text breaks parsing. The Chines
 payload is built from code points instead.
 #>
 param(
-    [string] $StateFile = (Join-Path $env:LOCALAPPDATA 'TransitShelf\state.json'),
+    [string] $StateFile,
     [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe')
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'verification-context.ps1')
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
@@ -53,7 +54,7 @@ $hadCache = $false
 $results = New-Object System.Collections.Generic.List[string]
 
 function Stop-App {
-    Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe } | Stop-Process -Force
     Start-Sleep -Milliseconds 1200
 }
 
@@ -101,7 +102,7 @@ function Restore-Data {
 
 function Start-App {
     $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
-    Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) | Out-Null
+    Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden | Out-Null
     Start-Sleep -Seconds 5
 }
 

@@ -20,13 +20,14 @@ The real state.json and cache are backed up first and restored afterwards.
 IMPORTANT: keep this file ASCII-only (see dev.ps1).
 #>
 param(
-    [string] $StateFile = (Join-Path $env:LOCALAPPDATA 'TransitShelf\state.json'),
+    [string] $StateFile,
     [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe'),
     [int] $FileCount = 120,
     [int] $Capacity = 99
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'verification-context.ps1')
 Add-Type -AssemblyName System.Windows.Forms
 
 Add-Type -Namespace Stress -Name Api -MemberDefinition @'
@@ -57,7 +58,7 @@ $results = New-Object System.Collections.Generic.List[string]
 
 function Stop-App {
     for ($attempt = 1; $attempt -le 10; $attempt++) {
-        $running = @(Get-Process -Name TransitShelf -ErrorAction SilentlyContinue)
+        $running = @(Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe })
         if ($running.Count -eq 0) {
             Start-Sleep -Milliseconds 1200
             return
@@ -121,7 +122,7 @@ function Restore-Data {
 
 function Start-App {
     $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
-    return (Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -PassThru)
+    return (Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden -PassThru)
 }
 
 function Wait-Window($process, [int] $timeoutMs) {

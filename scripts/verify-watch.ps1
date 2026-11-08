@@ -11,11 +11,12 @@ against state.json. Using a temp directory keeps the real Downloads folder untou
 IMPORTANT: keep this file ASCII-only (see dev.ps1).
 #>
 param(
-    [string] $StateFile = (Join-Path $env:LOCALAPPDATA 'TransitShelf\state.json'),
+    [string] $StateFile,
     [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe')
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'verification-context.ps1')
 $results = New-Object System.Collections.Generic.List[string]
 $watchDir = Join-Path $env:TEMP ('transitshelf-watch-' + [Guid]::NewGuid().ToString('n').Substring(0, 8))
 $cacheDir = Join-Path (Split-Path -Parent $StateFile) 'cache'
@@ -26,13 +27,13 @@ $hadState = $false
 $hadCache = $false
 
 function Stop-App {
-    Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe } | Stop-Process -Force
     Start-Sleep -Milliseconds 1200
 }
 
 function Start-App {
     $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
-    Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) | Out-Null
+    Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden | Out-Null
     Start-Sleep -Seconds 5
 }
 

@@ -73,8 +73,8 @@ Windows 桌面上一个常驻置顶的小浮窗。把散落在微信接收目录
 ## 环境要求
 
 - Windows 10 1809 及以上，或 Windows 11（64 位）
-- .NET 8 SDK（仅构建需要；只想运行则装 .NET 8 桌面运行时）
-- 本机 SDK 装在 `%LOCALAPPDATA%\Microsoft\dotnet`，没有写进系统 PATH，因此构建统一走仓库里的包装脚本
+- 默认发布包为自包含版，无需另装 .NET；框架依赖版才需要 .NET 8 桌面运行时
+- 开发构建需要 .NET 8 SDK；包装脚本自动查找 SDK，并把开发缓存留在仓库目录
 
 ## 构建与运行
 
@@ -92,11 +92,18 @@ Windows 桌面上一个常驻置顶的小浮窗。把散落在微信接收目录
 .\scripts\publish.ps1 -Output D:\some\dir      # 自定义输出目录
 ```
 
-- `dist\BlossomRest-win-x64\` 是便携版，解压即用，无需安装。
-- `dist\BlossomRest-<版本>-win-x64.zip` 为同内容压缩包；版本取自 `src/TransitShelf.App/TransitShelf.App.csproj` 的 `Version`，读不到时用 `0.1.0`。
-- 发布产物不含 `.pdb`，也不打包任何用户数据（条目与缓存仍在 `%LOCALAPPDATA%\TransitShelf`）。
+- 默认每次在 `dist/` 下创建新的带时间输出目录；指定的输出目录已存在时拒绝覆盖。
+- 输出目录内的 `BlossomRest-win-x64/` 为便携版，完整解压后运行 `TransitShelf.exe`；同目录 ZIP 为相同内容，附带 SHA-256 校验文件。
+- 版本从已构建的 exe 读取，继承 `Directory.Build.props` 的版本设置；当前交付版本为 `0.1.0` 测试版。
+- 包内带使用说明、版本说明与许可证，不含 `.pdb` 或用户数据；条目与缓存仍在 `%LOCALAPPDATA%\TransitShelf`，便携版更新也不会改变数据位置。
 
-安装包脚本模板在 `scripts/installer/BlossomRest.iss`（Inno Setup 6）。前置条件：先运行上面的发布脚本生成 `dist\BlossomRest-win-x64`，并在本机自行安装 Inno Setup 6——仓库不会下载或安装打包工具。装好后用 `ISCC.exe scripts\installer\BlossomRest.iss` 编译，按当前用户安装、免管理员，默认目录 `%LOCALAPPDATA%\Programs\BlossomRest`，不写开机自启项（自启由应用设置控制）；卸载不会删除 `%LOCALAPPDATA%\TransitShelf` 里的条目与缓存。当前尚未产出签名安装包。
+安装包采用 Inno Setup 6，先准备编译器，再对本次发布目录执行：
+
+```powershell
+.\scripts\build-installer.ps1 -PublishRoot <本次输出目录> -Compiler <ISCC.exe路径>
+```
+
+安装向导为简体中文，按当前用户安装、免管理员，默认目录 `%LOCALAPPDATA%\Programs\BlossomRest`。安装和卸载前检测运行实例，提示先从托盘退出，不强行结束程序；不自动启动、不写开机自启项，卸载保留用户数据。脚本不会下载工具；安装程序与 ZIP 均附带校验文件，当前测试版未签名。
 
 > 脚本必须保持纯 ASCII：Windows PowerShell 5.1 会把无 BOM 的 UTF-8 脚本按 GBK 读取，中文注释会导致解析失败。
 
@@ -110,7 +117,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-smoke.ps1        # 冷
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-stress.ps1       # 批量引用 / 快速热键 / 崩溃恢复
 ```
 
-所有验收脚本运行前都会备份真实 `state.json` 与 `cache`，结束后恢复；测试中的临时条目不会留在你的数据里。
+验收脚本默认创建独立测试目录，通过进程配置让程序读取同一份测试数据，不访问真实条目；已有程序运行时直接拒绝验收。测试会临时使用剪贴板，并可能移动鼠标。请先保存当前复制内容，退出程序并暂停鼠标操作。
+
+一次运行构建、单元测试和五组验收：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-release.ps1
+```
 
 冒烟与压测脚本请指定 Release 构建：
 
@@ -118,14 +131,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-stress.ps1       # 批
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-smoke.ps1 -Exe .\src\TransitShelf.App\bin\Release\net8.0-windows\TransitShelf.exe
 ```
 
-当前状态（2026-10-31）：四个项目编译通过、0 警告 0 错误；160 个单元测试全绿；冒烟与压测脚本通过（冷启动 605 ms、空闲 CPU 0%、99 条批量收录 657 ms、强杀恢复与孤儿缓存清理正常）。内存目标已按实测基线修订为收起空闲私有内存 ≤ 110 MB、收录 100 条增长 ≤ 30 MB（ADR D36）。手动添加文件夹、图文混合复制（RTF 富文本 + 「复制文字」两段式）、混合复制提示、「移动到文件夹…」（重名不覆盖 + 单级撤销）与「建议名称」（机器生成名给语义建议）已补齐；发布脚本、便携 zip 与 Inno Setup 模板已就绪，验收脚本统一为运行前备份、运行后恢复真实数据。工作区、右键菜单、缩略图、跟随系统配色、多显示器 / 缩放、移动到文件夹与建议名称的实机验收仍待完成。
+当前交付为 **0.1.0 测试版**：Release 构建零警告/零错误，167 个单元测试、35 项收录/监听/多选/冒烟/压力验收与 18 项安装验收通过。已生成自包含便携 ZIP 和中文安装包，验收使用独立数据目录，真实状态与缓存校验值保持不变。资源目标仍为收起空闲私有内存 ≤ 110 MB、100 条引用增长 ≤ 30 MB；曾有单次空闲 111.2 MB 超标，后续复测约 94 MB，长时资源稳定性仍需观察。多屏缩放、输入法焦点、跨应用投递及完整交互的手工验收尚未完成，当前未签名，也未宣告正式公开发布。
+
+日常操作见[使用说明](docs/USER-GUIDE.md)，当前功能范围与限制见[版本说明](docs/RELEASE-NOTES.md)。
 
 ## 还没做
 
 - 工作区、右键菜单、缩略图、跟随系统配色与多显示器 / 缩放的完整手工验收
 - 「移动到文件夹…」与「建议名称」的实机验收（撤销、重名、文件夹移动、右键预览）
 - 粘贴到上一个活动窗口（需激活并驱动第三方窗口，与红线 R5 冲突，待判定）
-- 安装包签名与正式分发（脚本模板已就绪，待选证书）
+- 安装包签名与正式分发；先完成测试版兼容性验收
 
 ## 设计红线
 

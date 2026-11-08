@@ -22,11 +22,12 @@ BOM as ANSI (GBK on zh-CN systems) and non-ASCII text breaks parsing. Chinese UI
 are built from code points instead.
 #>
 param(
-    [string] $StateFile = (Join-Path $env:LOCALAPPDATA 'TransitShelf\state.json'),
+    [string] $StateFile,
     [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe')
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'verification-context.ps1')
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -38,14 +39,35 @@ public delegate bool EnumProc(IntPtr h, IntPtr l);
 [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr h, int i);
 [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
-[DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+// UI Automation bounds are physical pixels; the PowerShell host is DPI-unaware.
+[DllImport("user32.dll", EntryPoint="SetPhysicalCursorPos", SetLastError=true)] public static extern bool SetCursorPos(int x, int y);
+[StructLayout(LayoutKind.Sequential)] public struct Point { public int X, Y; }
+[DllImport("user32.dll")] public static extern bool GetPhysicalCursorPos(out Point p);
+[DllImport("user32.dll")] public static extern IntPtr WindowFromPhysicalPoint(Point p);
+[DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr h, uint flags);
+[DllImport("user32.dll", SetLastError=true)] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+[DllImport("user32.dll", SetLastError=true)] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
 [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, IntPtr extra);
-public static void ClickAt(int x, int y) {
-  SetCursorPos(x, y);
+public static string ClickAt(IntPtr expectedWindow, int x, int y, int left, int top, int right, int bottom) {
+  // Keep the test window visible without activating it; never click a covering app.
+  if (!SetWindowPos(expectedWindow, new IntPtr(-1), 0, 0, 0, 0, 0x0013))
+    throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+  if (!SetCursorPos(x, y))
+    throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
   System.Threading.Thread.Sleep(150);
+  Point p;
+  bool obtained = GetPhysicalCursorPos(out p);
+  // Mixed-DPI cursor conversion can round a physical point by a few pixels.
+  // Require the actual pointer to stay inside this exact item, rather than pixel equality.
+  if (!obtained || p.X < left || p.X >= right || p.Y < top || p.Y >= bottom)
+    throw new InvalidOperationException("Cursor is outside the target item; no click was sent. expected=" + x + "," + y + " actual=" + p.X + "," + p.Y + " readable=" + obtained);
+  IntPtr hit = GetAncestor(WindowFromPhysicalPoint(p), 2);
+  if (hit != expectedWindow)
+    throw new InvalidOperationException("Test window is obstructed; no click was sent. hit=" + hit + " expected=" + expectedWindow);
   mouse_event(0x0002, 0, 0, 0, IntPtr.Zero);
   System.Threading.Thread.Sleep(60);
   mouse_event(0x0004, 0, 0, 0, IntPtr.Zero);
+  return "DIAGNOSTIC physical click=" + p.X + "," + p.Y + " target=" + hit;
 }
 public static IntPtr FindToolWindow(int pid) {
   IntPtr found = IntPtr.Zero;
@@ -57,6 +79,11 @@ public static IntPtr FindToolWindow(int pid) {
   return found;
 }
 '@
+
+# UI Automation and cursor APIs must share the same per-monitor coordinate context.
+if ([Verify.Api]::SetThreadDpiAwarenessContext([IntPtr](-4)) -eq [IntPtr]::Zero) {
+    throw 'Cannot enable per-monitor DPI awareness for the verification thread.'
+}
 
 # UI labels, spelled out by code point (see the header note about ASCII-only scripts):
 #   U+591A U+9009 = "multi select"      U+5B8C U+6210 = "done"
@@ -83,7 +110,7 @@ function Stop-App {
     # The app is single-instance: a survivor of an earlier run would keep the shelf and the
     # hotkeys, and the freshly started copy would silently exit. Make sure it is really gone.
     for ($attempt = 1; $attempt -le 10; $attempt++) {
-        $running = @(Get-Process -Name TransitShelf -ErrorAction SilentlyContinue)
+        $running = @(Get-Process -Name TransitShelf -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe })
         if ($running.Count -eq 0) {
             Start-Sleep -Milliseconds 500
             return
@@ -96,7 +123,7 @@ function Stop-App {
 
 function Start-App {
     $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
-    Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) | Out-Null
+    Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden | Out-Null
     Start-Sleep -Seconds 5
 }
 
@@ -177,12 +204,17 @@ function Select-AllItems($panel) {
     $items = Get-ItemElements $panel
     for ($index = 0; $index -lt $items.Count; $index++) {
         $rect = $items[$index].Current.BoundingRectangle
+        Write-Host ('DIAGNOSTIC click item ' + $index + ' bounds=' + $rect.ToString())
         # 24px from the left edge: on the icon, clear of the hover buttons and the pin button.
-        [Verify.Api]::ClickAt([int]($rect.Left + 24), [int]($rect.Top + ($rect.Height / 2)))
+        Write-Host ([Verify.Api]::ClickAt([IntPtr]$panel.Current.NativeWindowHandle, [int]($rect.Left + 24), [int]($rect.Top + ($rect.Height / 2)), [int]$rect.Left, [int]$rect.Top, [int]$rect.Right, [int]$rect.Bottom))
 
         # Wait for the counter instead of sleeping blindly; UIA and the click both need a moment.
         $want = $countSelectedPrefix + (' ' + ($index + 1) + ' ') + $countSelectedSuffix
         if (-not (Wait-ForText $panel $want 2000)) {
+            foreach ($node in (Get-ItemElements $panel)) {
+                $selection = $node.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)
+                Write-Host ('DIAGNOSTIC item selected=' + $selection.Current.IsSelected + ' bounds=' + $node.Current.BoundingRectangle.ToString())
+            }
             return $index
         }
     }

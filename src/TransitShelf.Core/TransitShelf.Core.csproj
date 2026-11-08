@@ -2,4 +2,8 @@
   <PropertyGroup>
     <RootNamespace>TransitShelf.Core</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <Using Include="TransitShelf.Core.Localization" />
+    <EmbeddedResource Include="Localization\Strings.json" />
+  </ItemGroup>
 </Project>

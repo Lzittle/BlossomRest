@@ -1,7 +1,7 @@
-<Window x:Class="TransitShelf.App.Views.SettingsWindow"
+<Window xmlns:loc="clr-namespace:TransitShelf.App.Localization" x:Class="TransitShelf.App.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="中转站 · 设置"
+        Title="{loc:Text T3D2FDA2D0587}"
         Width="520" Height="560"
         WindowStyle="None" ResizeMode="NoResize"
         AllowsTransparency="True"
@@ -32,10 +32,10 @@
 
       <!-- 标题栏：兼作拖动把手（空白区域按住可移窗口） -->
       <Grid Grid.Row="0" Margin="16,12,8,8">
-        <TextBlock Text="设置" FontSize="13" FontWeight="SemiBold"
+        <TextBlock Text="{loc:Text TDF3D58C7D84B}" FontSize="13" FontWeight="SemiBold"
                    Foreground="{DynamicResource PrimaryTextBrush}"
                    VerticalAlignment="Center" />
-        <Button Content="关闭" Style="{StaticResource TextButton}"
+        <Button Content="{loc:Text T3FD47EDCE45B}" Style="{StaticResource TextButton}"
                 HorizontalAlignment="Right" Margin="0"
                 Click="OnCloseClick" />
       </Grid>
@@ -45,14 +45,27 @@
                     HorizontalScrollBarVisibility="Disabled" Padding="16,0,12,0">
         <StackPanel Margin="0,0,4,0">
 
+          <Border CornerRadius="8" BorderThickness="1" Padding="14,12" Margin="0,0,0,10"
+                  Background="{DynamicResource SurfaceElevatedBrush}" BorderBrush="{DynamicResource StrokeBrush}">
+            <StackPanel>
+              <TextBlock Text="{loc:Text T9F6FEE1ABA17}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+              <WrapPanel Margin="0,8,0,0">
+                <Button x:Name="AutoLanguageButton" Tag="auto" Content="{loc:Text T217CFE7DB1E3}" Style="{StaticResource TextButton}" Click="OnLanguageClick" />
+                <Button x:Name="ChineseLanguageButton" Tag="zh-CN" Content="简体中文" Style="{StaticResource TextButton}" Click="OnLanguageClick" />
+                <Button x:Name="EnglishLanguageButton" Tag="en" Content="English" Style="{StaticResource TextButton}" Click="OnLanguageClick" />
+              </WrapPanel>
+              <TextBlock Text="{loc:Text TD9A7D99966A0}" FontSize="11" TextWrapping="Wrap"
+                         Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,0" />
+            </StackPanel>
+          </Border>
           <!-- 分组一：清理策略（FR-72） -->
           <Border CornerRadius="8" BorderThickness="1" Padding="14,12"
                   Background="{DynamicResource SurfaceElevatedBrush}"
                   BorderBrush="{DynamicResource StrokeBrush}">
             <StackPanel>
-              <TextBlock Text="清理策略" FontSize="12" FontWeight="SemiBold"
+              <TextBlock Text="{loc:Text TBACF8C4F7FFE}" FontSize="12" FontWeight="SemiBold"
                          Foreground="{DynamicResource PrimaryTextBrush}" />
-              <TextBlock Text="决定临时区能放多少、留多久。" FontSize="11" Margin="0,2,0,0"
+              <TextBlock Text="{loc:Text T9FE27CB4BB14}" FontSize="11" Margin="0,2,0,0"
                          Foreground="{DynamicResource SecondaryTextBrush}"
                          TextWrapping="Wrap" />
 
@@ -63,9 +76,9 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                  <TextBlock Text="临时区上限" FontSize="12"
+                  <TextBlock Text="{loc:Text TC0C92C80DE37}" FontSize="12"
                              Foreground="{DynamicResource PrimaryTextBrush}" />
-                  <TextBlock Text="超出后最旧的条目移出列表，源文件仍在原处。"
+                  <TextBlock Text="{loc:Text T870CFE52A7F5}"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              TextWrapping="Wrap" />
@@ -73,7 +86,7 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                   <TextBox x:Name="CapacityBox" Style="{StaticResource NumberBox}"
                            KeyDown="OnNumberKeyDown" LostFocus="OnCapacityLostFocus" />
-                  <TextBlock Text="项" FontSize="12" Margin="6,0,0,0"
+                  <TextBlock Text="{loc:Text T49CCDE43A154}" FontSize="12" Margin="6,0,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              VerticalAlignment="Center" />
                 </StackPanel>
@@ -86,9 +99,9 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                  <TextBlock Text="过期时长" FontSize="12"
+                  <TextBlock Text="{loc:Text TCE3349FFC2BA}" FontSize="12"
                              Foreground="{DynamicResource PrimaryTextBrush}" />
-                  <TextBlock Text="未钉住的条目超过这个时长后，下次启动时移出列表。"
+                  <TextBlock Text="{loc:Text T42DA7978846F}"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              TextWrapping="Wrap" />
@@ -96,7 +109,7 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                   <TextBox x:Name="TimeToLiveBox" Style="{StaticResource NumberBox}"
                            KeyDown="OnNumberKeyDown" LostFocus="OnTimeToLiveLostFocus" />
-                  <TextBlock Text="小时" FontSize="12" Margin="6,0,0,0"
+                  <TextBlock Text="{loc:Text T3B6FEFC50FEB}" FontSize="12" Margin="6,0,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              VerticalAlignment="Center" />
                 </StackPanel>
@@ -113,7 +126,7 @@
                   Background="{DynamicResource SurfaceElevatedBrush}"
                   BorderBrush="{DynamicResource StrokeBrush}">
             <StackPanel>
-              <TextBlock Text="退出行为" FontSize="12" FontWeight="SemiBold"
+              <TextBlock Text="{loc:Text TFA0ECD5D377E}" FontSize="12" FontWeight="SemiBold"
                          Foreground="{DynamicResource PrimaryTextBrush}" />
               <Grid Margin="0,10,0,0">
                 <Grid.ColumnDefinitions>
@@ -121,14 +134,14 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                  <TextBlock Text="退出时清空未钉住的条目" FontSize="12"
+                  <TextBlock Text="{loc:Text T9C03083F7CA5}" FontSize="12"
                              Foreground="{DynamicResource PrimaryTextBrush}"
                              TextWrapping="Wrap" />
                   <!--
                     风险说明必须常驻：这是一个不可逆的现场丢弃动作，
                     用户不该靠试错才知道下次启动会看到空列表（红线 R4）。
                   -->
-                  <TextBlock Text="开启后退出会清空临时区未钉住的条目。钉住项和工作区始终保留，源文件不受影响。"
+                  <TextBlock Text="{loc:Text TEC49EA83A2A0}"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SupportBrush}"
                              TextWrapping="Wrap" />
@@ -145,7 +158,7 @@
                   Background="{DynamicResource SurfaceElevatedBrush}"
                   BorderBrush="{DynamicResource StrokeBrush}">
             <StackPanel>
-              <TextBlock Text="启动" FontSize="12" FontWeight="SemiBold"
+              <TextBlock Text="{loc:Text T56410FC65314}" FontSize="12" FontWeight="SemiBold"
                          Foreground="{DynamicResource PrimaryTextBrush}" />
               <Grid Margin="0,10,0,0">
                 <Grid.ColumnDefinitions>
@@ -153,13 +166,13 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                  <TextBlock Text="开机自启" FontSize="12"
+                  <TextBlock Text="{loc:Text TDE38B92AD247}" FontSize="12"
                              Foreground="{DynamicResource PrimaryTextBrush}" />
                   <!--
                     状态以注册表为准：这里说明"可在系统里关"，而不是暗示只能在本程序里改。
                     用户从系统设置关掉后，本开关会跟着显示为关。
                   -->
-                  <TextBlock Text="登录 Windows 后自动启动并收成悬浮球。系统「设置 → 应用 → 启动」里能看到同一项，也能在那边关闭。"
+                  <TextBlock Text="{loc:Text TD91FA07BB5B9}"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              TextWrapping="Wrap" />
@@ -176,7 +189,7 @@
                   Background="{DynamicResource SurfaceElevatedBrush}"
                   BorderBrush="{DynamicResource StrokeBrush}">
             <StackPanel>
-              <TextBlock Text="界面" FontSize="12" FontWeight="SemiBold"
+              <TextBlock Text="{loc:Text T785D65C70FDE}" FontSize="12" FontWeight="SemiBold"
                          Foreground="{DynamicResource PrimaryTextBrush}" />
 
               <!-- 工作区 -->
@@ -186,9 +199,9 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                  <TextBlock Text="启用工作区" FontSize="12"
+                  <TextBlock Text="{loc:Text T38DF957CBE0B}" FontSize="12"
                              Foreground="{DynamicResource PrimaryTextBrush}" />
-                  <TextBlock Text="开启后顶部出现「临时区 / 工作区」标签，可把条目按用途分开放。"
+                  <TextBlock Text="{loc:Text TA6A182E27EBD}"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              TextWrapping="Wrap" />
@@ -209,19 +222,19 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                  <TextBlock Text="配色" FontSize="12"
+                  <TextBlock Text="{loc:Text T2AE75E168123}" FontSize="12"
                              Foreground="{DynamicResource PrimaryTextBrush}" />
-                  <TextBlock Text="深色适合常驻，浅色适合白天与投屏；跟随系统会随 Windows 主题自动切换。"
+                  <TextBlock Text="{loc:Text T27534D13173C}"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              TextWrapping="Wrap" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                  <Button x:Name="FrappeButton" Content="深色" Tag="Frappe"
+                  <Button x:Name="FrappeButton" Content="{loc:Text TA6B75D068032}" Tag="Frappe"
                           Style="{StaticResource TextButton}" Click="OnPaletteClick" />
-                  <Button x:Name="DawnButton" Content="浅色" Tag="RosePineDawn"
+                  <Button x:Name="DawnButton" Content="{loc:Text TAA0819DFC4D8}" Tag="RosePineDawn"
                           Style="{StaticResource TextButton}" Click="OnPaletteClick" />
-                  <Button x:Name="SystemButton" Content="跟随系统" Tag="System"
+                  <Button x:Name="SystemButton" Content="{loc:Text T217CFE7DB1E3}" Tag="System"
                           Style="{StaticResource TextButton}" Click="OnPaletteClick" />
                 </StackPanel>
               </Grid>
@@ -233,19 +246,19 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                  <TextBlock Text="单击条目" FontSize="12"
+                  <TextBlock Text="{loc:Text TFC641E6743D1}" FontSize="12"
                              Foreground="{DynamicResource PrimaryTextBrush}" />
-                  <TextBlock Text="默认按类型：文件夹打开，文件、文字、图片复制。双击始终打开。"
+                  <TextBlock Text="{loc:Text T060F6F2A4DD2}"
                              FontSize="11" Margin="0,2,0,0"
                              Foreground="{DynamicResource SecondaryTextBrush}"
                              TextWrapping="Wrap" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                  <Button x:Name="ByKindButton" Content="按类型" Tag="ByKind"
+                  <Button x:Name="ByKindButton" Content="{loc:Text T5BA65A74C4E7}" Tag="ByKind"
                           Style="{StaticResource TextButton}" Click="OnClickBehaviorClick" />
-                  <Button x:Name="AlwaysOpenButton" Content="统一打开" Tag="AlwaysOpen"
+                  <Button x:Name="AlwaysOpenButton" Content="{loc:Text T4938F04D947C}" Tag="AlwaysOpen"
                           Style="{StaticResource TextButton}" Click="OnClickBehaviorClick" />
-                  <Button x:Name="AlwaysCopyButton" Content="统一复制" Tag="AlwaysCopy"
+                  <Button x:Name="AlwaysCopyButton" Content="{loc:Text TFA9692CD1A65}" Tag="AlwaysCopy"
                           Style="{StaticResource TextButton}" Click="OnClickBehaviorClick" />
                 </StackPanel>
               </Grid>
@@ -257,9 +270,9 @@
                   Background="{DynamicResource SurfaceElevatedBrush}"
                   BorderBrush="{DynamicResource StrokeBrush}">
             <StackPanel>
-              <TextBlock Text="自动收录" FontSize="12" FontWeight="SemiBold"
+              <TextBlock Text="{loc:Text TB57F49750C84}" FontSize="12" FontWeight="SemiBold"
                          Foreground="{DynamicResource PrimaryTextBrush}" />
-              <TextBlock Text="新落到这些目录里的文件自动进临时区，默认关闭（红线 R6）。"
+              <TextBlock Text="{loc:Text TA899DE6C4A5A}"
                          FontSize="11" Margin="0,2,0,0"
                          Foreground="{DynamicResource SecondaryTextBrush}"
                          TextWrapping="Wrap" />
@@ -269,7 +282,7 @@
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="下载目录" FontSize="12"
+                <TextBlock Grid.Column="0" Text="{loc:Text T1778C4DF2C6E}" FontSize="12"
                            Foreground="{DynamicResource PrimaryTextBrush}"
                            VerticalAlignment="Center" />
                 <CheckBox Grid.Column="1" x:Name="WatchDownloadsBox"
@@ -282,7 +295,7 @@
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="微信接收目录" FontSize="12"
+                <TextBlock Grid.Column="0" Text="{loc:Text T1DB5818576F9}" FontSize="12"
                            Foreground="{DynamicResource PrimaryTextBrush}"
                            VerticalAlignment="Center" />
                 <CheckBox Grid.Column="1" x:Name="WatchWeChatBox"
@@ -301,7 +314,7 @@
           <TextBlock x:Name="HintText" FontSize="11" VerticalAlignment="Center"
                      Foreground="{DynamicResource SecondaryTextBrush}"
                      TextTrimming="CharacterEllipsis" />
-          <Button Content="完成" Style="{StaticResource TextButton}"
+          <Button Content="{loc:Text TC0B3FBFF51CC}" Style="{StaticResource TextButton}"
                   HorizontalAlignment="Right" Margin="0"
                   Click="OnCloseClick" />
         </Grid>

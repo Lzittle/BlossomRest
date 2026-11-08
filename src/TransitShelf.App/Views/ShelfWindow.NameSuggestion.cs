@@ -24,23 +24,23 @@ public partial class ShelfWindow
 
         // 读文件时间属于阻塞 I/O，放到后台；建议本身是纯函数，可随结果一起回到 UI 线程执行。
         var modifiedAt = await Task.Run(() => LastWriteTimeOf(path, createdAt));
-        var suggestion = NameSuggester.Suggest(kind, displayName, path, modifiedAt);
+        var suggestion = NameSuggester.Suggest(kind, displayName, path, modifiedAt, Loc.Language);
         if (suggestion is null)
         {
-            Status("这个名称看起来已经有语义，不需要建议");
+            Status(Loc.Text("T8A90B938E02A"));
             return;
         }
 
-        if (!Confirm($"建议名称：\n\n{suggestion.Name}\n\n理由：{suggestion.Reason}\n\n"
-                     + "只修改架子里的显示名，不改磁盘文件。应用吗？"))
+        if (!Confirm(Loc.Format("T4C45FC39F133", suggestion.Name, suggestion.Reason)
+                     + Loc.Text("T4C0BEA47C9D7")))
         {
-            Status("已取消，名称未改变");
+            Status(Loc.Text("TACFBC9DBE201"));
             return;
         }
 
         item.DisplayName = suggestion.Name;
         ScheduleSave();
-        Status($"已应用建议名：{suggestion.Name}（如需同步文件名，用「重命名源文件为显示名」）");
+        Status(Loc.Format("TEFD3EC5E9B37", suggestion.Name));
     }
 
     /// <summary>文件 / 文件夹的修改时间；失效条目或读取失败时退回收录时间。</summary>

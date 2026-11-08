@@ -4,7 +4,10 @@ Temporarily registers this product under the current user. Refuses an existing i
 Runs no real-user data migrations and keeps fixture data for inspection.
 Keep ASCII-only for Windows PowerShell 5.1.
 #>
-param([Parameter(Mandatory = $true)] [string] $Setup)
+param(
+    [Parameter(Mandatory = $true)] [string] $Setup,
+    [ValidateSet('chinesesimp', 'english')] [string] $InstallerLanguage = 'chinesesimp'
+)
 $ErrorActionPreference = 'Stop'
 $Setup = (Resolve-Path -LiteralPath $Setup).Path
 $root = Split-Path -Parent $PSScriptRoot
@@ -43,7 +46,7 @@ function Check([string] $name, [bool] $ok) {
 }
 function Run-Setup([string] $label) {
     $log = Join-Path $testRoot ($label + '.log')
-    $process = Start-Process -FilePath $Setup -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/NOICONS', ('/DIR="' + $target + '"'), ('/LOG="' + $log + '"')) -WindowStyle Hidden -PassThru
+    $process = Start-Process -FilePath $Setup -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/NOICONS', ('/LANG=' + $InstallerLanguage), ('/DIR="' + $target + '"'), ('/LOG="' + $log + '"')) -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(60000)) { throw 'Installer did not finish within 60 seconds; inspect its window.' }
     $process.Refresh()
     Write-Host ($label + ' exit=' + $process.ExitCode)
@@ -72,7 +75,11 @@ try {
     $sourceExe = Join-Path (Split-Path -Parent $Setup) 'BlossomRest-win-x64\TransitShelf.dll'
     Check 'installed payload matches published build' ((Get-FileHash -LiteralPath $sourceExe).Hash -eq (Get-FileHash -LiteralPath (Join-Path $target 'TransitShelf.dll')).Hash)
     Check 'current-user uninstall registration' (Test-Path -LiteralPath $registration)
-    foreach ($name in @('LICENSE.txt', 'USER-GUIDE.md', 'RELEASE-NOTES.md')) {
+    $displayName = (Get-ItemProperty -LiteralPath $registration).DisplayName
+    $expectedName = 'Blossom Rest'
+    if ($InstallerLanguage -eq 'chinesesimp') { $expectedName = (-join ([char]0x82B1, [char]0x6258)) + ' ' + [char]0x00B7 + ' Blossom Rest' }
+    Check 'installer display name localized' ($displayName -eq $expectedName)
+    foreach ($name in @('LICENSE.txt', 'USER-GUIDE.md', 'RELEASE-NOTES.md', 'USER-GUIDE.en.md', 'RELEASE-NOTES.en.md')) {
         Check ('installed attachment ' + $name) (Test-Path -LiteralPath (Join-Path $target $name))
     }
     $png = Join-Path $data 'cache\fixture.png'
@@ -80,7 +87,7 @@ try {
     $groupId = [Guid]::NewGuid().ToString('n')
     $state = @{
         schemaVersion = 3
-        settings = @{ enableWorkspace = $true; clearOnExit = $false }
+        settings = @{ enableWorkspace = $true; clearOnExit = $false; language = $(if ($InstallerLanguage -eq 'english') { 'en' } else { 'zh-CN' }) }
         groups = @(@{ id = $groupId; name = 'installer-fixture'; createdAt = [DateTimeOffset]::Now.ToString('O') })
         items = @(@{ id = [Guid]::NewGuid().ToString('n'); kind = 'file'; displayName = 'fixture.png'; cachePath = $png; createdAt = [DateTimeOffset]::Now.ToString('O'); pinned = $true; groupId = $groupId })
     }

@@ -8,6 +8,9 @@ namespace TransitShelf.Core.Settings;
 /// </summary>
 public sealed class ShelfSettings
 {
+    /// <summary>新安装跟随系统，旧状态由解码器回填中文。</summary>
+    public string Language { get; set; } = LanguagePreference.Automatic;
+
     /// <summary>临时区条目上限的合法区间（用户可自由输入，见 FR-72）。</summary>
     public const int CapacityMin = 1;
 

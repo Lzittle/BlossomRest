@@ -20,17 +20,17 @@ public sealed class FileMoveService
 
         if (!isFolder && !File.Exists(source))
         {
-            throw new FileNotFoundException("源文件不存在，可能已被移动或删除", source);
+            throw new FileNotFoundException(Loc.Text("T8ED47D57B565"), source);
         }
 
         if (!Directory.Exists(targetDir))
         {
-            throw new DirectoryNotFoundException($"目标文件夹不存在：{targetDirectory}");
+            throw new DirectoryNotFoundException(Loc.Format("T7E41BCE8C475", targetDirectory));
         }
 
         if (isFolder && IsInside(targetDir, source))
         {
-            throw new IOException("不能把文件夹移动到它自己内部");
+            throw new IOException(Loc.Text("TC42B4CE2F7EF"));
         }
 
         // 已经在目标目录里：不改名、不复制，直接告诉调用方无需操作。
@@ -46,7 +46,7 @@ public sealed class FileMoveService
         if (isFolder
             && !string.Equals(Path.GetPathRoot(source), Path.GetPathRoot(targetDir), StringComparison.OrdinalIgnoreCase))
         {
-            throw new IOException("文件夹不能跨磁盘移动；请先在资源管理器中移动，再重新添加");
+            throw new IOException(Loc.Text("TA6D3D07A6844"));
         }
 
         var name = Path.GetFileName(source.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
@@ -75,7 +75,7 @@ public sealed class FileMoveService
         }
 
         var directory = Path.GetDirectoryName(desired)
-            ?? throw new IOException("无法确定目标目录");
+            ?? throw new IOException(Loc.Text("T0AF75AB7CF2D"));
         var baseName = isFolder ? Path.GetFileName(desired) : Path.GetFileNameWithoutExtension(desired);
         var extension = isFolder ? string.Empty : Path.GetExtension(desired);
 
@@ -88,7 +88,7 @@ public sealed class FileMoveService
             }
         }
 
-        throw new IOException($"目标目录重名过多：{Path.GetFileName(desired)}");
+        throw new IOException(Loc.Format("TB75D0263AF05", Path.GetFileName(desired)));
     }
 
     private static bool IsFree(string path) => !File.Exists(path) && !Directory.Exists(path);

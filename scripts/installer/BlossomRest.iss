@@ -28,13 +28,16 @@
 [Setup]
 ; Stable application id; keep it unchanged across releases.
 AppId={{7C2E5A94-0D3B-4F68-9A1E-5B8C7D2F4A61}
-AppName={#AppName}
+AppName={cm:ProductName}
 AppVersion={#AppVersion}
 VersionInfoVersion={#GetVersionNumbersString(AddBackslash(PublishDir) + AppExeName)}
+VersionInfoDescription=Blossom Rest Setup
+VersionInfoProductName=Blossom Rest
 AppPublisher=Blossom Rest
 DefaultDirName={localappdata}\Programs\BlossomRest
-DefaultGroupName={#AppName}
+DefaultGroupName={cm:ProductName}
 UninstallDisplayIcon={app}\{#AppExeName}
+UninstallDisplayName={cm:ProductName}
 PrivilegesRequired=lowest
 MinVersion=10.0.17763
 AllowNoIcons=yes
@@ -52,10 +55,15 @@ ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
 Name: "chinesesimp"; MessagesFile: "Languages\ChineseSimplified.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[CustomMessages]
+chinesesimp.ProductName=花托 · Blossom Rest
+english.ProductName=Blossom Rest
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
-Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
+Name: "{group}\{cm:ProductName}"; Filename: "{app}\{#AppExeName}"
+Name: "{group}\{cm:UninstallProgram,{cm:ProductName}}"; Filename: "{uninstallexe}"

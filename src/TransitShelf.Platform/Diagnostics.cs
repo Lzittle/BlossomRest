@@ -23,7 +23,7 @@ public static class Diagnostics
             AppPaths.EnsureCreated();
             File.AppendAllText(
                 Path.Combine(AppPaths.Root, "slow.log"),
-                $"[{DateTimeOffset.Now:O}] {operation} 用时 {elapsed.TotalMilliseconds:F0} ms{Environment.NewLine}");
+                Loc.Format("T6E592BB1C5AC", DateTimeOffset.Now, operation, elapsed.TotalMilliseconds, Environment.NewLine));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -53,10 +53,10 @@ public static class Diagnostics
         try
         {
             AppPaths.EnsureCreated();
-            var detail = exception is null ? "（没有可用的异常信息）" : exception.ToString();
+            var detail = exception is null ? Loc.Text("T028CFA95F7C9") : exception.ToString();
             File.AppendAllText(
                 Path.Combine(AppPaths.Root, "error.log"),
-                $"[{DateTimeOffset.Now:O}] {operation}失败：{detail}{Environment.NewLine}{Environment.NewLine}");
+                Loc.Format("T4340C58ABC55", DateTimeOffset.Now, operation, detail, Environment.NewLine, Environment.NewLine));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

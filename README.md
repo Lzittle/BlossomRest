@@ -1,5 +1,7 @@
 # 花托 · Blossom Rest
 
+简体中文 | [English](README.en.md)
+
 > 常驻桌面角落的「中转站」：文件、文件夹、文字、图片先随手放进来，需要时再复制或拖到微信、AI 会话、资源管理器。
 
 中文发布名「花托」，英文名 **Blossom Rest**，代码内部代号 `TransitShelf`。
@@ -103,7 +105,7 @@ Windows 桌面上一个常驻置顶的小浮窗。把散落在微信接收目录
 .\scripts\build-installer.ps1 -PublishRoot <本次输出目录> -Compiler <ISCC.exe路径>
 ```
 
-安装向导为简体中文，按当前用户安装、免管理员，默认目录 `%LOCALAPPDATA%\Programs\BlossomRest`。安装和卸载前检测运行实例，提示先从托盘退出，不强行结束程序；不自动启动、不写开机自启项，卸载保留用户数据。脚本不会下载工具；安装程序与 ZIP 均附带校验文件，当前测试版未签名。
+安装向导支持简体中文和英文，按当前用户安装、免管理员，默认目录 `%LOCALAPPDATA%\Programs\BlossomRest`。安装和卸载前检测运行实例，提示先从托盘退出，不强行结束程序；不自动启动、不写开机自启项，卸载保留用户数据。脚本不会下载工具；安装程序与 ZIP 均附带校验文件，当前测试版未签名。
 
 > 脚本必须保持纯 ASCII：Windows PowerShell 5.1 会把无 BOM 的 UTF-8 脚本按 GBK 读取，中文注释会导致解析失败。
 
@@ -125,13 +127,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-stress.ps1       # 批
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-release.ps1
 ```
 
+双语界面检查使用独立样本，通过程序内部按钮事件验证语言切换、多选复制和原文保留，不移动鼠标（会临时使用剪贴板）：
+
+```powershell
+.\scripts\dev.ps1 run -c Release --project scripts/verification/LocalizationUiHarness
+```
+
 冒烟与压测脚本请指定 Release 构建：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-smoke.ps1 -Exe .\src\TransitShelf.App\bin\Release\net8.0-windows\TransitShelf.exe
 ```
 
-当前交付为 **0.1.0 测试版**：Release 构建零警告/零错误，167 个单元测试、35 项收录/监听/多选/冒烟/压力验收与 18 项安装验收通过。已生成自包含便携 ZIP 和中文安装包，验收使用独立数据目录，真实状态与缓存校验值保持不变。资源目标仍为收起空闲私有内存 ≤ 110 MB、100 条引用增长 ≤ 30 MB；曾有单次空闲 111.2 MB 超标，后续复测约 94 MB，长时资源稳定性仍需观察。多屏缩放、输入法焦点、跨应用投递及完整交互的手工验收尚未完成，当前未签名，也未宣告正式公开发布。
+当前交付为 **0.1.0 双语测试版**：同一程序在设置中即时切换简体中文和英文，语言选择会保存；新安装跟随系统，旧状态保持中文，用户内容不翻译。Release 构建零警告/零错误，184 个单元测试及双语切换、复制、重启检查通过。提供自包含便携 ZIP、中英文安装向导和使用说明，验收使用独立数据目录。资源目标仍为收起空闲私有内存 ≤ 110 MB、100 条引用增长 ≤ 30 MB；曾有单次空闲超标，长时资源稳定性仍需观察。多屏缩放、输入法焦点、跨应用投递及完整交互的手工验收尚未完成，当前未签名，也未宣告正式公开发布。
 
 日常操作见[使用说明](docs/USER-GUIDE.md)，当前功能范围与限制见[版本说明](docs/RELEASE-NOTES.md)。
 

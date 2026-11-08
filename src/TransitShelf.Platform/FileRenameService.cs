@@ -9,7 +9,7 @@ public sealed class FileRenameService
     public string Rename(string path, string newName)
     {
         var directory = Path.GetDirectoryName(path)
-            ?? throw new IOException("无法确定文件所在目录");
+            ?? throw new IOException(Loc.Text("TA7DF79DE82A8"));
 
         var target = Path.Combine(directory, newName);
         if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
@@ -19,7 +19,7 @@ public sealed class FileRenameService
 
         if (File.Exists(target) || Directory.Exists(target))
         {
-            throw new IOException($"同名文件已存在：{newName}");
+            throw new IOException(Loc.Format("TD2A4B5890F65", newName));
         }
 
         File.Move(path, target);

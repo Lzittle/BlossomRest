@@ -81,6 +81,11 @@ if ($version -notmatch '^\d+\.\d+\.\d+(?:\.\d+)?$') {
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $publishDir 'LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $root 'docs\USER-GUIDE.md') -Destination (Join-Path $publishDir 'USER-GUIDE.md')
 Copy-Item -LiteralPath (Join-Path $root 'docs\RELEASE-NOTES.md') -Destination (Join-Path $publishDir 'RELEASE-NOTES.md')
+Copy-Item -LiteralPath (Join-Path $root 'docs\USER-GUIDE.en.md') -Destination (Join-Path $publishDir 'USER-GUIDE.en.md')
+Copy-Item -LiteralPath (Join-Path $root 'docs\RELEASE-NOTES.en.md') -Destination (Join-Path $publishDir 'RELEASE-NOTES.en.md')
+New-Item -ItemType Directory -Path (Join-Path $publishDir 'images') | Out-Null
+Copy-Item -LiteralPath (Join-Path $root 'docs\images\shelf-items.en.png') -Destination (Join-Path $publishDir 'images\shelf-items.en.png')
+Copy-Item -LiteralPath (Join-Path $root 'docs\images\settings.en.png') -Destination (Join-Path $publishDir 'images\settings.en.png')
 
 # The self-contained Microsoft.NETCore.App runtime carries its own notices.
 if ($SelfContained) {

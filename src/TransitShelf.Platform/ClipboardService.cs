@@ -39,7 +39,7 @@ public sealed class ClipboardService
             return true;
         }
 
-        Diagnostics.LogFailure("复制文件到剪贴板", failure);
+        Diagnostics.LogFailure(Loc.Text("T3F240AE13B94"), failure);
         return false;
     }
 
@@ -58,7 +58,7 @@ public sealed class ClipboardService
             return true;
         }
 
-        Diagnostics.LogFailure("复制文字到剪贴板", failure);
+        Diagnostics.LogFailure(Loc.Text("TDBD2B9D64CE4"), failure);
         return false;
     }
 
@@ -94,7 +94,7 @@ public sealed class ClipboardService
             return true;
         }
 
-        Diagnostics.LogFailure("复制混合内容到剪贴板", failure);
+        Diagnostics.LogFailure(Loc.Text("TFAF3EBB1527C"), failure);
         return false;
     }
 

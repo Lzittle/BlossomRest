@@ -21,7 +21,8 @@ IMPORTANT: keep this file ASCII-only (see dev.ps1).
 #>
 param(
     [string] $StateFile,
-    [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe')
+    [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe'),
+    [ValidateSet('zh-CN', 'en')] [string] $Language = 'zh-CN'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -143,7 +144,7 @@ Backup-Data
 
 try {
     # Start from a clean shelf so the numbers are independent of whatever is currently stored.
-    Write-State '{ "schemaVersion": 2, "settings": {}, "items": [] }'
+    Write-State ('{ "schemaVersion": 3, "settings": { "language": "' + $Language + '" }, "items": [] }')
     New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
     Get-ChildItem -LiteralPath $cacheDir -File -ErrorAction SilentlyContinue |
         Remove-Item -Force -ErrorAction SilentlyContinue

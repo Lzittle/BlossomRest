@@ -31,19 +31,19 @@ public partial class ShelfWindow
             return;
         }
 
-        if (!Confirm($"将「{item.DisplayName}」移动到：\n\n{target}\n\n原文件会从当前位置移走；目标已有同名文件时自动追加序号，不会覆盖。"
-                     + "移动后可点「撤销移动」恢复。继续吗？"))
+        if (!Confirm(Loc.Format("TA6056189FF03", item.DisplayName, target)
+                     + Loc.Text("T63F8D29140A6")))
         {
             return;
         }
 
-        Status("正在移动…", 30);
+        Status(Loc.Text("TC133A47D40C3"), 30);
         try
         {
             var outcome = await Task.Run(() => _mover.Move(source, target));
             if (!outcome.Moved)
             {
-                Status("该条目已经在这个文件夹中");
+                Status(Loc.Text("T7D85C01675E2"));
                 return;
             }
 
@@ -56,13 +56,13 @@ public partial class ShelfWindow
 
             var folder = FolderName(target);
             Status(outcome.Renamed
-                ? $"已移动到「{folder}」，同名已改为「{Path.GetFileName(outcome.Path)}」；可撤销"
-                : $"已移动到「{folder}」；可撤销");
+                ? Loc.Format("TCD37925B4E85", folder, Path.GetFileName(outcome.Path))
+                : Loc.Format("T6D435951A749", folder));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
                                        or NotSupportedException)
         {
-            Status($"移动失败：{ex.Message}");
+            Status(Loc.Format("T2C46D88280BA", ex.Message));
         }
     }
 
@@ -76,11 +76,11 @@ public partial class ShelfWindow
         var originalDirectory = Path.GetDirectoryName(record.OriginalPath);
         if (originalDirectory is null)
         {
-            Status("撤销失败：找不到原始目录");
+            Status(Loc.Text("T19A377F7F45D"));
             return;
         }
 
-        Status("正在撤销移动…", 30);
+        Status(Loc.Text("T1AD3D7ED00A2"), 30);
         try
         {
             var outcome = await Task.Run(() => _mover.Move(record.CurrentPath, originalDirectory));
@@ -96,13 +96,13 @@ public partial class ShelfWindow
             UpdateUndoMoveButton();
 
             Status(outcome.Renamed
-                ? $"已撤销移动；原位置已有同名文件，落位为「{Path.GetFileName(outcome.Path)}」"
-                : "已撤销移动，文件已回到原位置");
+                ? Loc.Format("TF1D87E7EEB76", Path.GetFileName(outcome.Path))
+                : Loc.Text("T760FD5289D80"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
                                        or NotSupportedException)
         {
-            Status($"撤销失败：{ex.Message}；可稍后重试");
+            Status(Loc.Format("T2786182F5043", ex.Message));
         }
     }
 
@@ -114,7 +114,7 @@ public partial class ShelfWindow
     {
         using var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
-            Description = $"把「{item.DisplayName}」移动到哪个文件夹",
+            Description = Loc.Format("T930C3A619FE3", item.DisplayName),
             UseDescriptionForTitle = true,
             ShowNewFolderButton = true,
         };

@@ -66,7 +66,14 @@ public static class ShelfStateCodec
             .Select(ToGroup)
             .ToList();
 
-        return (items, groups, state.Settings ?? new ShelfSettings());
+        var settings = state.Settings ?? new ShelfSettings();
+        using var document = JsonDocument.Parse(json);
+        var settingsNode = document.RootElement.EnumerateObject()
+            .FirstOrDefault(property => property.Name.Equals("settings", StringComparison.OrdinalIgnoreCase)).Value;
+        var hasLanguage = settingsNode.ValueKind == JsonValueKind.Object
+            && settingsNode.EnumerateObject().Any(property => property.Name.Equals("language", StringComparison.OrdinalIgnoreCase));
+        settings.Language = hasLanguage ? LanguagePreference.Normalize(settings.Language) : LanguagePreference.Chinese;
+        return (items, groups, settings);
     }
 
     private static ShelfItemRecord ToRecord(ShelfItem item) => new()
@@ -94,7 +101,7 @@ public static class ShelfStateCodec
         Id = record.Id,
         Kind = record.Kind,
         DisplayName = string.IsNullOrWhiteSpace(record.DisplayName)
-            ? record.Path ?? record.Text ?? "（未命名）"
+            ? record.Path ?? record.Text ?? Loc.Text("T89A7D926BD0E")
             : record.DisplayName,
         Path = record.Path,
         Text = record.Text,
@@ -108,7 +115,7 @@ public static class ShelfStateCodec
     {
         Id = record.Id,
         // 落盘分组名为空时不进界面：回退到「未命名分组」，而不是显示一条空标签。
-        Name = string.IsNullOrWhiteSpace(record.Name) ? "未命名分组" : record.Name,
+        Name = string.IsNullOrWhiteSpace(record.Name) ? Loc.Text("TA6A35AC2C894") : record.Name,
         CreatedAt = record.CreatedAt,
     };
 }

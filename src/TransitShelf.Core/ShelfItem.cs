@@ -150,7 +150,7 @@ public sealed class ShelfItem : INotifyPropertyChanged
 
     public bool IsMissing => State == ItemState.Missing;
 
-    public string StatusLabel => IsMissing ? " · 已失效" : string.Empty;
+    public string StatusLabel => IsMissing ? Loc.Text("T9868CEC4010C") : string.Empty;
 
     /// <summary>重新检查源文件是否还存在；失效的条目标记但不删除（FR-45）。</summary>
     public void RefreshState()
@@ -166,10 +166,10 @@ public sealed class ShelfItem : INotifyPropertyChanged
     }
 
     /// <summary>钉住标记（用于条目卡片上的提示）。</summary>
-    public string PinLabel => Pinned ? " · 已钉住" : string.Empty;
+    public string PinLabel => Pinned ? Loc.Text("T161AE16AA7A2") : string.Empty;
 
     /// <summary>右键菜单里的动作名，随钉住状态变化。</summary>
-    public string PinActionLabel => Pinned ? "取消钉住" : "钉住";
+    public string PinActionLabel => Pinned ? Loc.Text("TA5CB3CD51C2F") : Loc.Text("T7F8494360D08");
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -178,9 +178,9 @@ public sealed class ShelfItem : INotifyPropertyChanged
 
     public string KindLabel => Kind switch
     {
-        ItemKind.Folder => "文件夹",
-        ItemKind.Text => "文字",
-        _ => IsImage ? "图片" : "文件",
+        ItemKind.Folder => Loc.Text("T7C7802D8ADAE"),
+        ItemKind.Text => Loc.Text("T14B69BD6EEB0"),
+        _ => IsImage ? Loc.Text("TD24C10D37DB0") : Loc.Text("T39932F24FE11"),
     };
 
     /// <summary>
@@ -195,10 +195,10 @@ public sealed class ShelfItem : INotifyPropertyChanged
         get
         {
             var span = DateTimeOffset.Now - CreatedAt;
-            if (span.TotalSeconds < 60) return "刚刚";
-            if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} 分钟前";
-            if (span.TotalHours < 24) return $"{(int)span.TotalHours} 小时前";
-            return $"{(int)span.TotalDays} 天前";
+            if (span.TotalSeconds < 60) return Loc.Text("TDE6785D99E02");
+            if (span.TotalMinutes < 60) return Loc.Format("T66F93FE5E906", (int)span.TotalMinutes);
+            if (span.TotalHours < 24) return Loc.Format("T6504A911F9E1", (int)span.TotalHours);
+            return Loc.Format("T09F12DA9A77F", (int)span.TotalDays);
         }
     }
 
@@ -210,4 +210,11 @@ public sealed class ShelfItem : INotifyPropertyChanged
     /// 表现为"放了一小时还是刚刚"。必须由外部（ShelfService 的定时刷新）显式踢一脚。
     /// </summary>
     public void NotifyRelativeTime() => OnPropertyChanged(nameof(RelativeTime));
+
+    /// <summary>只刷新派生标签；不修改显示名、文字、路径或分组。</summary>
+    public void NotifyLanguageChanged()
+    {
+        foreach (var property in new[] { nameof(RelativeTime), nameof(StatusLabel), nameof(PinLabel), nameof(PinActionLabel), nameof(KindLabel) })
+            OnPropertyChanged(property);
+    }
 }

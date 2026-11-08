@@ -29,4 +29,5 @@
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
   </ItemGroup>
+  <ItemGroup><Using Include="TransitShelf.Core.Localization" /></ItemGroup>
 </Project>

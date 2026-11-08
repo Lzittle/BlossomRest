@@ -44,8 +44,8 @@ public partial class SettingsWindow : Window
             var settings = _owner.Settings;
             CapacityBox.Text = settings.SafeCapacity.ToString(CultureInfo.InvariantCulture);
             TimeToLiveBox.Text = settings.TimeToLiveHours.ToString(CultureInfo.InvariantCulture);
-            RangeHint.Text = $"合法区间：上限 {ShelfSettings.CapacityMin}～{ShelfSettings.CapacityMax} 项，"
-                           + $"时长 {ShelfSettings.TimeToLiveHoursMin}～{ShelfSettings.TimeToLiveHoursMax} 小时。超出会自动修正。";
+            RangeHint.Text = Loc.Format("T26B7FE1FC1BF", ShelfSettings.CapacityMin, ShelfSettings.CapacityMax)
+                           + Loc.Format("TE484BD72C004", ShelfSettings.TimeToLiveHoursMin, ShelfSettings.TimeToLiveHoursMax);
             ClearOnExitBox.IsChecked = settings.ClearOnExit;
             // 自启状态来自注册表而不是 state.json：用户在系统设置里关掉后，这里要如实显示关。
             StartWithWindowsBox.IsChecked = StartupService.IsEnabled();
@@ -54,15 +54,26 @@ public partial class SettingsWindow : Window
             WatchWeChatBox.IsChecked = settings.WatchWeChat;
             RefreshPaletteButtons(settings.Palette);
             RefreshClickBehaviorButtons(settings.ClickBehavior);
+            AutoLanguageButton.FontWeight = settings.Language == LanguagePreference.Automatic ? FontWeights.SemiBold : FontWeights.Normal;
+            ChineseLanguageButton.FontWeight = settings.Language == LanguagePreference.Chinese ? FontWeights.SemiBold : FontWeights.Normal;
+            EnglishLanguageButton.FontWeight = settings.Language == LanguagePreference.English ? FontWeights.SemiBold : FontWeights.Normal;
+            Width = Loc.IsEnglish ? 600 : 520;
 
-            WorkspaceNote.Text = "启用后可分组长期保存；关闭只隐藏入口，已有分组和条目会保留。";
+            WorkspaceNote.Text = Loc.Text("T692989EB1DE7");
         }
         finally
         {
             _loading = false;
         }
 
-        Hint("改动即时生效，无需重启。");
+        Hint(Loc.Text("TADFF1D8892C5"));
+    }
+
+    private void OnLanguageClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string language }) return;
+        _owner.SetLanguage(language);
+        OnLoad(this, new RoutedEventArgs());
     }
 
     private void OnWindowKeyDown(object sender, KeyEventArgs e)
@@ -155,8 +166,8 @@ public partial class SettingsWindow : Window
 
         _owner.SetClearOnExit(ClearOnExitBox.IsChecked == true);
         Hint(ClearOnExitBox.IsChecked == true
-            ? "退出时清空临时区未钉住项；钉住项和工作区保留。"
-            : "退出时不清空，条目留到下次启动。");
+            ? Loc.Text("T490A7B5C347E")
+            : Loc.Text("TA4EAD4C7BB5F"));
     }
 
     /// <summary>
@@ -176,13 +187,13 @@ public partial class SettingsWindow : Window
             _loading = true;
             StartWithWindowsBox.IsChecked = StartupService.IsEnabled();
             _loading = false;
-            Hint("写入启动项失败，可能被安全软件或组策略拦截。");
+            Hint(Loc.Text("T9BDF2F70E4B0"));
             return;
         }
 
         Hint(enabled
-            ? "已登记开机自启；可在系统「设置 → 应用 → 启动」中查看。"
-            : "已取消开机自启。");
+            ? Loc.Text("TE8EA4E67BC7A")
+            : Loc.Text("T90F467689BD6"));
     }
 
     private void OnEnableWorkspaceChanged(object sender, RoutedEventArgs e)
@@ -194,8 +205,8 @@ public partial class SettingsWindow : Window
 
         _owner.SetEnableWorkspace(EnableWorkspaceBox.IsChecked == true);
         Hint(EnableWorkspaceBox.IsChecked == true
-            ? "已启用工作区，可在主面板顶部切换。"
-            : "已关闭工作区，回到单临时区模式。");
+            ? Loc.Text("T80AD82C383FF")
+            : Loc.Text("T4929FDA5A0FB"));
     }
 
     private void OnWatchChanged(object sender, RoutedEventArgs e)
@@ -207,7 +218,7 @@ public partial class SettingsWindow : Window
 
         _owner.SetWatchDownloads(WatchDownloadsBox.IsChecked == true);
         _owner.SetWatchWeChat(WatchWeChatBox.IsChecked == true);
-        Hint("自动收录设置已更新。");
+        Hint(Loc.Text("TBBC9BB5B951F"));
     }
 
     // ── 配色（FR-73）──────────────────────────────────────────────
@@ -221,7 +232,7 @@ public partial class SettingsWindow : Window
 
         _owner.ApplyPalette(name);
         RefreshPaletteButtons(_owner.Settings.Palette);
-        Hint("配色：" + PaletteService.DisplayName(_owner.Settings.Palette));
+        Hint(Loc.Text("T39364D84BE9A") + PaletteService.DisplayName(_owner.Settings.Palette));
     }
 
     /// <summary>
@@ -251,9 +262,9 @@ public partial class SettingsWindow : Window
         RefreshClickBehaviorButtons(behavior);
         Hint(behavior switch
         {
-            ShelfClickBehavior.AlwaysOpen => "单击任意条目都打开；双击行为不变。",
-            ShelfClickBehavior.AlwaysCopy => "单击任意条目都复制；双击行为不变。",
-            _ => "单击文件夹打开，文件、文字、图片复制。",
+            ShelfClickBehavior.AlwaysOpen => Loc.Text("TEEC3D62C707A"),
+            ShelfClickBehavior.AlwaysCopy => Loc.Text("TE5F1E0FFFC8F"),
+            _ => Loc.Text("T3154B5EAA176"),
         });
     }
 

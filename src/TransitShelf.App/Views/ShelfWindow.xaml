@@ -1,8 +1,8 @@
-<Window x:Class="TransitShelf.App.Views.ShelfWindow"
+<Window xmlns:loc="clr-namespace:TransitShelf.App.Localization" x:Class="TransitShelf.App.Views.ShelfWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:TransitShelf.App.Views"
-        Title="中转站"
+        Title="{loc:Text TC462A7D6AFC3}"
         Width="300" Height="400"
         WindowStyle="None" ResizeMode="NoResize"
         ShowInTaskbar="False" ShowActivated="False" Topmost="True"
@@ -47,7 +47,7 @@
             42px 显示时约低 2.4 像素，所以整体上移 2.4 做视觉居中。
           -->
           <Image Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center"
-                 Source="/Assets/brand-rose.png"
+                 Source="/TransitShelf;component/Assets/brand-rose.png"
                  RenderOptions.BitmapScalingMode="HighQuality">
             <Image.RenderTransform>
               <TranslateTransform Y="-2.4" />
@@ -77,9 +77,9 @@
 
         <StackPanel x:Name="WorkspaceTabs" Grid.Row="0" Orientation="Horizontal"
                     Margin="8,8,8,0" Visibility="Collapsed">
-          <Button x:Name="TemporaryTab" Content="临时区" Style="{StaticResource TextButton}"
+          <Button x:Name="TemporaryTab" Content="{loc:Text T8B9E89F157E4}" Style="{StaticResource TextButton}"
                   Click="OnTemporaryTabClick" AutomationProperties.AutomationId="TemporaryTab" />
-          <Button x:Name="WorkspaceTab" Content="工作区" Style="{StaticResource TextButton}"
+          <Button x:Name="WorkspaceTab" Content="{loc:Text T37979829426B}" Style="{StaticResource TextButton}"
                   Click="OnWorkspaceTabClick" AutomationProperties.AutomationId="WorkspaceTab" />
         </StackPanel>
 
@@ -90,20 +90,20 @@
             <ColumnDefinition Width="Auto" />
           </Grid.ColumnDefinitions>
           <Button x:Name="GroupPicker" Style="{StaticResource TextButton}" Click="OnGroupPickerClick"
-                  HorizontalContentAlignment="Left" AutomationProperties.Name="选择分组">
-            <TextBlock x:Name="GroupNameText" Text="选择分组" TextTrimming="CharacterEllipsis" MaxWidth="160" />
+                  HorizontalContentAlignment="Left" AutomationProperties.Name="{loc:Text T71B4A91E0593}">
+            <TextBlock x:Name="GroupNameText" Text="{loc:Text T71B4A91E0593}" TextTrimming="CharacterEllipsis" MaxWidth="160" />
           </Button>
-          <Button Grid.Column="1" Content="新建" Style="{StaticResource TextButton}" Click="OnCreateGroupClick" />
-          <Button x:Name="GroupManageButton" Grid.Column="2" Content="管理" Style="{StaticResource TextButton}"
+          <Button Grid.Column="1" Content="{loc:Text T50EF2F4CF6A4}" Style="{StaticResource TextButton}" Click="OnCreateGroupClick" />
+          <Button x:Name="GroupManageButton" Grid.Column="2" Content="{loc:Text TBB6D995724F4}" Style="{StaticResource TextButton}"
                   Click="OnManageGroupClick" />
         </Grid>
 
         <Grid Grid.Row="2" Margin="8,10,8,6">
           <StackPanel x:Name="PanelContext" Orientation="Horizontal" VerticalAlignment="Center"
-                      ToolTip="当前查看区域">
+                      ToolTip="{loc:Text T5A9B30BB9B0C}">
             <Path Width="16" Height="16" Margin="0,0,6,0" Style="{StaticResource IconBase}"
                   Data="{StaticResource IconShelf}" Stroke="{DynamicResource AccentBrush}" />
-            <TextBlock x:Name="PanelTitle" Text="临时区" FontSize="12" FontWeight="SemiBold"
+            <TextBlock x:Name="PanelTitle" Text="{loc:Text T8B9E89F157E4}" FontSize="12" FontWeight="SemiBold"
                        Foreground="{DynamicResource PrimaryTextBrush}"
                        VerticalAlignment="Center" />
           </StackPanel>
@@ -112,28 +112,28 @@
                   CornerRadius="8" Padding="3,2">
             <Grid>
               <StackPanel x:Name="HeaderActions" Orientation="Horizontal">
-                <Button Content="收录" Style="{StaticResource TextButton}" Click="OnCollectClick"
-                        ToolTip="把剪贴板里的文字、文件或图片收进来（Ctrl+Alt+C）" />
-                <Button Content="添加" Style="{StaticResource TextButton}" Click="OnAddMenuClick"
-                        ToolTip="添加文件或文件夹到中转站" />
-                <Button x:Name="MultiSelectButton" Content="多选" Style="{StaticResource TextButton}"
+                <Button Content="{loc:Text TCF42BB2B0421}" Style="{StaticResource TextButton}" Click="OnCollectClick"
+                        ToolTip="{loc:Text TF1B381976776}" />
+                <Button Content="{loc:Text T7A8A11EAD507}" Style="{StaticResource TextButton}" Click="OnAddMenuClick"
+                        ToolTip="{loc:Text TE355E4BFDB6F}" />
+                <Button x:Name="MultiSelectButton" Content="{loc:Text T461E085D5CA2}" Style="{StaticResource TextButton}"
                         Click="OnMultiSelectClick"
-                        ToolTip="勾选多条，一次复制成换行分隔的路径清单" />
-                <Button x:Name="ClearButton" Content="清空" Style="{StaticResource TextButton}" Click="OnClearClick" />
-                <Button Content="收起" Style="{StaticResource TextButton}" Click="OnCollapseClick" />
+                        ToolTip="{loc:Text T7C92A48F7937}" />
+                <Button x:Name="ClearButton" Content="{loc:Text T1EF3DE06B32E}" Style="{StaticResource TextButton}" Click="OnClearClick" />
+                <Button Content="{loc:Text TAFD4B783536B}" Style="{StaticResource TextButton}" Click="OnCollapseClick" />
               </StackPanel>
 
               <!-- 批量操作条：进入多选后替换头部按钮，位置与高度不变 -->
               <StackPanel x:Name="BatchBar" Orientation="Horizontal" Visibility="Collapsed">
-                <TextBlock x:Name="BatchCountText" Text="已选 0 项" FontSize="11" VerticalAlignment="Center"
+                <TextBlock x:Name="BatchCountText" Text="{loc:Text TF30528EEE828}" FontSize="11" VerticalAlignment="Center"
                            Margin="0,0,4,0" Foreground="{DynamicResource AccentBrush}" />
-                <Button x:Name="BatchSelectAllButton" Content="全选" Style="{StaticResource TextButton}"
+                <Button x:Name="BatchSelectAllButton" Content="{loc:Text T3A5040B68ABF}" Style="{StaticResource TextButton}"
                         Click="OnBatchSelectAllClick" />
-                <Button Content="复制所选内容" Style="{StaticResource TextButton}" Click="OnBatchCopyPathsClick"
-                        ToolTip="文件可粘贴为附件，文字与路径按顺序保留；图文混合时 Word/WPS/邮件可一次粘贴" />
-                <Button Content="复制文字" Style="{StaticResource TextButton}" Click="OnBatchCopyTextClick"
-                        ToolTip="只复制勾选项里的文字，配合文件粘贴可避开聊天窗口只取一种格式的限制" />
-                <Button Content="完成" Style="{StaticResource TextButton}" Click="OnBatchExitClick" />
+                <Button Content="{loc:Text T6E6433AA4568}" Style="{StaticResource TextButton}" Click="OnBatchCopyPathsClick"
+                        ToolTip="{loc:Text TAF1A3DB60788}" />
+                <Button Content="{loc:Text T29636E43FDB4}" Style="{StaticResource TextButton}" Click="OnBatchCopyTextClick"
+                        ToolTip="{loc:Text T39AA210EACC6}" />
+                <Button Content="{loc:Text TC0B3FBFF51CC}" Style="{StaticResource TextButton}" Click="OnBatchExitClick" />
               </StackPanel>
             </Grid>
           </Border>
@@ -146,22 +146,22 @@
           </Grid.ColumnDefinitions>
           <Grid Margin="0,0,8,0">
             <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Width="Auto"
-                     ToolTip="按显示名、路径或文字内容搜索"
+                     ToolTip="{loc:Text T17FCCE30504D}"
                      TextChanged="OnSearchTextChanged"
                      PreviewMouseLeftButtonDown="OnSearchBoxPreviewMouseDown"
                      LostKeyboardFocus="OnSearchBoxLostKeyboardFocus"
-                     AutomationProperties.Name="搜索条目" />
+                     AutomationProperties.Name="{loc:Text TF7672EC59588}" />
             <Path Width="16" Height="16" Margin="10,0,0,0" HorizontalAlignment="Left"
                   Style="{StaticResource IconBase}" Data="{StaticResource IconSearch}"
                   Stroke="{DynamicResource SecondaryTextBrush}" IsHitTestVisible="False" />
             <TextBlock x:Name="SearchPlaceholder" Margin="30,0,10,0" HorizontalAlignment="Left"
-                       VerticalAlignment="Center" Text="搜索名称、路径或文字"
+                       VerticalAlignment="Center" Text="{loc:Text T3D25DC0D43C5}"
                        FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
                        Opacity="0.78" IsHitTestVisible="False" />
           </Grid>
-          <Button x:Name="FilterTypeButton" Grid.Column="1" Content="全部类型"
+          <Button x:Name="FilterTypeButton" Grid.Column="1" Content="{loc:Text T267C4A7A86DD}"
                   Style="{StaticResource FilterButton}" Click="OnFilterTypeClick"
-                  ToolTip="按条目类型筛选" AutomationProperties.Name="类型筛选" />
+                  ToolTip="{loc:Text TE2E1AE44D93C}" AutomationProperties.Name="{loc:Text T21517C09A6E0}" />
         </Grid>
 
         <Grid Grid.Row="4">
@@ -232,8 +232,8 @@
             <TextBlock x:Name="EmptyHint" Margin="0,14,0,0" TextWrapping="Wrap" TextAlignment="Center"
                        FontSize="12" LineHeight="20"
                        Foreground="{DynamicResource SecondaryTextBrush}"
-                       Text="把文件、文件夹或文字拖进来。&#x0a;单击：文件夹打开 / 其余复制；双击打开；按住条目可拖到其他应用。" />
-            <Button x:Name="EmptyCreateGroupButton" Content="新建分组" HorizontalAlignment="Center"
+                       Text="{loc:Text TC97FB6E5E317}" />
+            <Button x:Name="EmptyCreateGroupButton" Content="{loc:Text T3D49D9FCB6D1}" HorizontalAlignment="Center"
                     Margin="0,12,0,0" Style="{StaticResource TextButton}" Click="OnCreateGroupClick"
                     Visibility="Collapsed" />
           </StackPanel>
@@ -281,26 +281,26 @@
                 <Grid>
                   <Grid.ContextMenu>
                     <ContextMenu Opened="OnItemContextMenuOpened">
-                      <MenuItem Header="复制路径" Click="OnCopyPathClick" />
-                      <MenuItem Header="在文件夹中显示" Click="OnRevealClick">
+                      <MenuItem Header="{loc:Text TB97C49ACB930}" Click="OnCopyPathClick" />
+                      <MenuItem Header="{loc:Text T037C31EC9ECF}" Click="OnRevealClick">
                         <MenuItem.Icon>
                           <Path Style="{StaticResource IconBase}" Data="{StaticResource IconLocate}"
                                 Stroke="{DynamicResource MenuIconBrush}" />
                         </MenuItem.Icon>
                       </MenuItem>
-                      <MenuItem Header="移动到文件夹…" Tag="MoveToFolder" Click="OnMoveToFolderClick"
-                                ToolTip="把文件或文件夹移到指定目录；同名自动加序号，不覆盖；可撤销" />
+                      <MenuItem Header="{loc:Text TBFD3F6070F7D}" Tag="MoveToFolder" Click="OnMoveToFolderClick"
+                                ToolTip="{loc:Text TFE4298A1A7C0}" />
                       <MenuItem Header="{Binding PinActionLabel}" Click="OnTogglePinClick" />
-                      <MenuItem Header="钉入工作区 / 移动到分组" SubmenuOpened="OnMoveMenuOpened" Tag="WorkspaceMove">
-                        <MenuItem Header="选择分组…" />
+                      <MenuItem Header="{loc:Text TE6CE1C7B644F}" SubmenuOpened="OnMoveMenuOpened" Tag="WorkspaceMove">
+                        <MenuItem Header="{loc:Text T148A2509F47A}" />
                       </MenuItem>
                       <Separator />
-                      <MenuItem Header="修复乱码名称" Click="OnRepairNameClick" />
-                      <MenuItem Header="建议名称" Tag="NameSuggestion" Click="OnSuggestNameClick"
-                                ToolTip="为哈希或机器生成的名字给出有语义的建议名；只改显示名，不改磁盘文件" />
-                      <MenuItem Header="重命名源文件为显示名" Click="OnRenameSourceClick" />
+                      <MenuItem Header="{loc:Text T322ECDE931AC}" Click="OnRepairNameClick" />
+                      <MenuItem Header="{loc:Text TE52F51632C8A}" Tag="NameSuggestion" Click="OnSuggestNameClick"
+                                ToolTip="{loc:Text T99F0B4730748}" />
+                      <MenuItem Header="{loc:Text T036A87E463AF}" Click="OnRenameSourceClick" />
                       <Separator />
-                      <MenuItem Header="删除条目" Click="OnDeleteClick">
+                      <MenuItem Header="{loc:Text T81385C38C944}" Click="OnDeleteClick">
                         <MenuItem.Icon>
                           <Path Style="{StaticResource IconBase}" Data="{StaticResource IconDelete}"
                                 Stroke="{DynamicResource MenuIconBrush}" />
@@ -395,9 +395,9 @@
                               Visibility="{Binding IsMouseOver,
                                           RelativeSource={RelativeSource AncestorType=ListBoxItem},
                                           Converter={StaticResource BoolToVisibility}}">
-                    <Button Content="打开" Style="{StaticResource TextButton}" Click="OnOpenClick" />
-                    <Button Content="复制" Style="{StaticResource TextButton}" Click="OnCopyClick" />
-                    <Button Content="定位" Style="{StaticResource TextButton}" Click="OnRevealClick" />
+                    <Button Content="{loc:Text TC771248E511F}" Style="{StaticResource TextButton}" Click="OnOpenClick" />
+                    <Button Content="{loc:Text T63D90D977348}" Style="{StaticResource TextButton}" Click="OnCopyClick" />
+                    <Button Content="{loc:Text T49726F09C812}" Style="{StaticResource TextButton}" Click="OnRevealClick" />
                   </StackPanel>
 
                   <!-- 常显的钉住图标：不用右键，点一下即可切换 -->
@@ -465,10 +465,10 @@
             <TextBlock x:Name="StatusText" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
                        Foreground="{DynamicResource HighlightBrush}" />
             <!-- 移动后常驻，状态栏文字消失也不影响撤销（FR-23） -->
-            <Button x:Name="UndoMoveButton" Grid.Column="1" Content="撤销移动"
+            <Button x:Name="UndoMoveButton" Grid.Column="1" Content="{loc:Text T79E816018962}"
                     Style="{StaticResource TextButton}" Visibility="Collapsed"
                     Click="OnUndoMoveClick"
-                    ToolTip="把刚才移动的文件移回原位置" />
+                    ToolTip="{loc:Text T91836403126E}" />
           </Grid>
         </Grid>
       </Grid>

@@ -39,18 +39,18 @@ public partial class ShelfWindow
         MarkTab(TemporaryTab, !_workspaceActive);
         MarkTab(WorkspaceTab, _workspaceActive);
         var group = _workspace.Find(_selectedGroupId);
-        PanelTitle.Text = _workspaceActive ? "工作区" : "临时区";
+        PanelTitle.Text = _workspaceActive ? Loc.Text("T37979829426B") : Loc.Text("T8B9E89F157E4");
         PanelContext.ToolTip = _workspaceActive
-            ? $"当前查看：工作区 · {group?.Name ?? "未选择分组"}"
-            : "当前查看：临时区";
-        GroupNameText.Text = group?.Name ?? "选择分组";
-        GroupPicker.ToolTip = group?.Name ?? "先新建一个分组";
+            ? Loc.Format("T62EF217337E4", group?.Name ?? Loc.Text("TCDB8BBE5DB23"))
+            : Loc.Text("T7D9A119A4CCD");
+        GroupNameText.Text = group?.Name ?? Loc.Text("T71B4A91E0593");
+        GroupPicker.ToolTip = group?.Name ?? Loc.Text("T3ABE206FAA92");
         GroupPicker.IsEnabled = _workspace.Groups.Count > 0;
         GroupManageButton.IsEnabled = group is not null;
         EmptyHint.Text = _workspaceActive
-            ? group is null ? "把常用资料放在工作区，长期保留。\n先新建一个分组。"
-                : "这个分组还是空的。\n拖入文件或收录剪贴板，条目将长期保留。"
-            : "把文件、文件夹或文字拖进来。\n单击：文件夹打开 / 其余复制；双击打开；按住条目可拖到其他应用。";
+            ? group is null ? Loc.Text("TFE99B3AEDC74")
+                : Loc.Text("T735E8099B3C6")
+            : Loc.Text("TC97FB6E5E317");
         EmptyCreateGroupButton.Visibility = _workspaceActive && group is null
             ? Visibility.Visible : Visibility.Collapsed;
         RefreshFooter();
@@ -62,7 +62,7 @@ public partial class ShelfWindow
         button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
         button.SetResourceReference(Control.ForegroundProperty, selected ? "AccentBrush" : "SecondaryTextBrush");
         button.SetValue(System.Windows.Automation.AutomationProperties.HelpTextProperty,
-            selected ? "当前区域" : "切换区域");
+            selected ? Loc.Text("T7C27592242B8") : Loc.Text("T2A1B11A5D52A"));
     }
 
     private void ResetScopeActions()
@@ -92,7 +92,7 @@ public partial class ShelfWindow
     private bool CanCollectInCurrentScope()
     {
         if (!_workspaceActive || _workspace.Find(CurrentGroupId) is not null) return true;
-        Status("请先新建一个工作区分组");
+        Status(Loc.Text("T239DC2012944"));
         return false;
     }
 
@@ -121,16 +121,16 @@ public partial class ShelfWindow
     {
         if (_workspace.Groups.Count >= WorkspaceService.MaxGroups)
         {
-            Status($"最多创建 {WorkspaceService.MaxGroups} 个分组");
+            Status(Loc.Format("T0F7B958F6CA9", WorkspaceService.MaxGroups));
             return null;
         }
-        var name = AskGroupName("新建分组", string.Empty);
+        var name = AskGroupName(Loc.Text("T3D49D9FCB6D1"), string.Empty);
         if (name is null) return null;
         var group = _workspace.Create(name);
         if (group is not null)
         {
             SelectScope(true, group.Id);
-            Status($"已创建分组：{group.Name}");
+            Status(Loc.Format("T5F117A854064", group.Name));
         }
         return group;
     }
@@ -155,18 +155,18 @@ public partial class ShelfWindow
     {
         if (_workspace.Find(_selectedGroupId) is not { } group) return;
         var menu = new ContextMenu();
-        var copy = new MenuItem { Header = "复制整组路径清单" };
+        var copy = new MenuItem { Header = Loc.Text("TB3DAE8320E66") };
         copy.Click += (_, _) => CopyGroupPaths(group);
         menu.Items.Add(copy);
-        var rename = new MenuItem { Header = "重命名分组…" };
+        var rename = new MenuItem { Header = Loc.Text("T13888A54EDAA") };
         rename.Click += (_, _) =>
         {
-            var name = AskGroupName("重命名分组", group.Name);
-            if (name is not null && _workspace.Rename(group, name)) Status($"分组已改名：{group.Name}");
+            var name = AskGroupName(Loc.Text("T5218CD8D059E"), group.Name);
+            if (name is not null && _workspace.Rename(group, name)) Status(Loc.Format("T96B1E25597B9", group.Name));
         };
         menu.Items.Add(rename);
         menu.Items.Add(new Separator());
-        var delete = new MenuItem { Header = "删除分组…" };
+        var delete = new MenuItem { Header = Loc.Text("T2FCE1D553FDA") };
         delete.Click += (_, _) => DeleteGroup(group);
         menu.Items.Add(delete);
         ShowMenu(menu, GroupManageButton);
@@ -178,23 +178,23 @@ public partial class ShelfWindow
         var paths = PathListFormatter.Paths(items);
         if (paths.Count == 0)
         {
-            Status(items.Count == 0 ? "这个分组还是空的" : "组内都是文字，没有可复制的路径");
+            Status(items.Count == 0 ? Loc.Text("T923BBEAD8E0E") : Loc.Text("T5868EB4D2DD9"));
             return;
         }
         var skipped = items.Count - paths.Count;
         Status(_clipboard.CopyText(PathListFormatter.Format(items))
-            ? $"已复制 {paths.Count} 条路径" + (skipped > 0 ? $"，跳过 {skipped} 条文字" : string.Empty)
-            : "复制失败，请重试（剪贴板可能被其他程序占用）");
+            ? Loc.Format("TE42E343CCCB4", paths.Count) + (skipped > 0 ? Loc.Format("TC6BCB3A08D35", skipped) : string.Empty)
+            : Loc.Text("T8F41785DBB7D"));
     }
 
     private void DeleteGroup(ShelfGroup group)
     {
-        if (!Confirm($"删除分组「{group.Name}」？\n\n组内条目将移回临时区并钉住，不参与自动清理。原始文件不受影响。")) return;
+        if (!Confirm(Loc.Format("T70416297388B", group.Name))) return;
         ResetScopeActions();
         var count = _workspace.Delete(group, _shelf.Items);
         // 批量改变了所属区域与钉住状态，重新应用排序及临时区上限。
         _shelf.LoadFrom(_shelf.Items.ToList());
-        Status($"已删除分组，{count} 条移回临时区并钉住");
+        Status(Loc.Format("T78475E8F4A05", count));
     }
 
     private void OnItemContextMenuOpened(object sender, RoutedEventArgs e)
@@ -227,13 +227,13 @@ public partial class ShelfWindow
             choice.Click += (_, _) => MoveItem(item, group.Id);
             menu.Items.Add(choice);
         }
-        var create = new MenuItem { Header = "新建分组并移入…" };
+        var create = new MenuItem { Header = Loc.Text("TAD8CA4718EE9") };
         create.Click += (_, _) => { if (CreateGroup() is { } group) MoveItem(item, group.Id); };
         menu.Items.Add(create);
         if (!item.IsTemporary)
         {
             menu.Items.Add(new Separator());
-            var temporary = new MenuItem { Header = "移回临时区…" };
+            var temporary = new MenuItem { Header = Loc.Text("T02F92D7764F5") };
             temporary.Click += (_, _) => MoveItem(item, null);
             menu.Items.Add(temporary);
         }
@@ -241,11 +241,11 @@ public partial class ShelfWindow
 
     private void MoveItem(ShelfItem item, string? groupId)
     {
-        if (groupId is null && !Confirm("移回临时区后，将恢复上限与过期清理规则，可能立即淘汰最旧的未钉住条目。继续吗？")) return;
+        if (groupId is null && !Confirm(Loc.Text("T143822348704"))) return;
         var before = _shelf.Items.Count;
         if (!_shelf.MoveToGroup(item, groupId)) return;
         var evicted = before - _shelf.Items.Count;
-        Status((groupId is null ? "已移回临时区" : "已移入工作区分组，长期保留")
-            + (evicted > 0 ? $"，淘汰 {evicted} 条，源文件未受影响" : string.Empty));
+        Status((groupId is null ? Loc.Text("TEE1B789562CF") : Loc.Text("T7C0AF31FF026"))
+            + (evicted > 0 ? Loc.Format("T67D72596AF2F", evicted) : string.Empty));
     }
 }

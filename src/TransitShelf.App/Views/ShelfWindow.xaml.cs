@@ -22,7 +22,7 @@ namespace TransitShelf.App.Views;
 /// </summary>
 public partial class ShelfWindow : Window
 {
-    private const double ExpandedWidth = 300;
+    private static double ExpandedWidth => Loc.IsEnglish ? 380 : 300;
     private const double ExpandedHeight = 400;
     private const double CollapsedSize = 64;
     private const double ExpandedCornerRadius = 8;
@@ -187,6 +187,7 @@ public partial class ShelfWindow : Window
         ApplyLayout();
         RefreshWorkspace();
         LoadState();
+        Loc.LanguageChanged += RefreshLanguage;
         _clockTimer.Start();
     }
 
@@ -212,12 +213,13 @@ public partial class ShelfWindow : Window
 
         _topmostTimer.Start();
         Status(toggleOk && collectOk
-            ? $"{PaletteService.DisplayName(_settings.Palette)} · Ctrl+Alt+D 唤出 · Ctrl+Alt+C 收录"
-            : $"{PaletteService.DisplayName(_settings.Palette)} · 部分快捷键被其他软件占用");
+            ? Loc.Format("T208B7DB5183F", PaletteService.DisplayName(_settings.Palette))
+            : Loc.Format("TF4A5B15D4C8F", PaletteService.DisplayName(_settings.Palette)));
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        Loc.LanguageChanged -= RefreshLanguage;
         _saveTimer.Stop();
         _clockTimer.Stop();
         _themeTimer.Stop();
@@ -355,15 +357,15 @@ public partial class ShelfWindow : Window
 
         if (removed == 0 && kept == 0)
         {
-            Status("这里已经是空的");
+            Status(Loc.Text("TE4DADD856E45"));
         }
         else if (kept > 0)
         {
-            Status($"已清空 {removed} 项，保留 {kept} 项已钉住");
+            Status(Loc.Format("T7E68BE07B17E", removed, kept));
         }
         else
         {
-            Status($"已清空 {removed} 项");
+            Status(Loc.Format("T79E09754E9E8", removed));
         }
     }
 
@@ -407,10 +409,10 @@ public partial class ShelfWindow : Window
         ScheduleSave();
 
         var evicted = before - _shelf.Items.Count;
-        var corrected = target != value ? $"（已修正为合法区间 {ShelfSettings.CapacityMin}～{ShelfSettings.CapacityMax}）" : string.Empty;
+        var corrected = target != value ? Loc.Format("T094C73D93701", ShelfSettings.CapacityMin, ShelfSettings.CapacityMax) : string.Empty;
         Status(evicted > 0
-            ? $"上限：{target} 项（已淘汰 {evicted} 条，源文件仍在原处）{corrected}"
-            : $"上限：{target} 项{corrected}");
+            ? Loc.Format("T2BB74164020A", target, evicted, corrected)
+            : Loc.Format("T545868C5A891", target, corrected));
     }
 
     /// <summary>
@@ -429,7 +431,7 @@ public partial class ShelfWindow : Window
 
         _settings.TimeToLiveHours = target;
         ScheduleSave();
-        Status($"过期时长：{target} 小时（下次启动生效）");
+        Status(Loc.Format("T6646D6EB7431", target));
     }
 
     /// <summary>
@@ -447,9 +449,9 @@ public partial class ShelfWindow : Window
         ScheduleSave();
         Status(behavior switch
         {
-            ShelfClickBehavior.AlwaysOpen => "单击行为：统一打开",
-            ShelfClickBehavior.AlwaysCopy => "单击行为：统一复制",
-            _ => "单击行为：按类型（文件夹打开，其余复制）",
+            ShelfClickBehavior.AlwaysOpen => Loc.Text("T1BF9AA4B5187"),
+            ShelfClickBehavior.AlwaysCopy => Loc.Text("TC86781D620D5"),
+            _ => Loc.Text("T5F377BCFF98B"),
         });
     }
 
@@ -464,7 +466,7 @@ public partial class ShelfWindow : Window
     {
         _settings.ClearOnExit = enabled;
         ScheduleSave();
-        Status(enabled ? "退出时清空临时区未钉住项，钉住项和工作区保留" : "退出时不再清空，条目留到下次启动");
+        Status(enabled ? Loc.Text("TD550BFD2CDCE") : Loc.Text("T3C66F1DE06FB"));
     }
 
     /// <summary>
@@ -484,7 +486,7 @@ public partial class ShelfWindow : Window
         RefreshWorkspace();
         ApplyLayout();
         ScheduleSave();
-        Status(enabled ? "已启用工作区" : "已关闭工作区，回到单临时区模式");
+        Status(enabled ? Loc.Text("T5132A187675F") : Loc.Text("T0E1F5EB1F4D9"));
     }
 
     /// <summary>
@@ -498,8 +500,8 @@ public partial class ShelfWindow : Window
         var succeeded = enabled ? StartupService.Enable(exePath) : StartupService.Disable();
 
         Status(succeeded
-            ? (enabled ? "已开启开机自启" : "已取消开机自启")
-            : "更新开机自启失败，可能被安全软件或组策略拦截");
+            ? (enabled ? Loc.Text("T7FE7588AE29F") : Loc.Text("T4A88879EF6C3"))
+            : Loc.Text("TD076F701DAB3"));
 
         return succeeded;
     }
@@ -538,7 +540,7 @@ public partial class ShelfWindow : Window
         _settings.Palette = target;
         UpdateThemeWatcher();
         ScheduleSave();
-        Status($"配色：{PaletteService.DisplayName(target)}");
+        Status(Loc.Format("T5E168E5E702D", PaletteService.DisplayName(target)));
     }
 
     /// <summary>按当前配色设置启停系统主题轮询：只有「跟随系统」才需要一直监听。</summary>
@@ -574,7 +576,7 @@ public partial class ShelfWindow : Window
         }
 
         PaletteService.Apply(PaletteService.System);
-        Status($"已跟随系统切换为 {PaletteService.DisplayName(resolved)}");
+        Status(Loc.Format("T4FF6993363B8", PaletteService.DisplayName(resolved)));
     }
 
     /// <summary>按当前设置重启目录监听。</summary>
@@ -588,8 +590,8 @@ public partial class ShelfWindow : Window
         _watcher.Restart(targets, OnWatchedFile, AppPaths.CacheDirectory);
 
         Status(targets.Count == 0
-            ? "自动收录已关闭"
-            : $"正在监听 {targets.Count} 个目录，新文件会自动进架");
+            ? Loc.Text("T452BDB2C5BB0")
+            : Loc.Format("TA42551227E94", targets.Count));
     }
 
     /// <summary>监听回调来自后台线程，切回界面线程再改集合。</summary>
@@ -598,7 +600,7 @@ public partial class ShelfWindow : Window
         Dispatcher.Invoke(() =>
         {
             var item = _shelf.AddFile(path);
-            Status($"自动收录：{item.DisplayName}");
+            Status(Loc.Format("T8F2C6D225756", item.DisplayName));
         });
     }
 
@@ -616,7 +618,7 @@ public partial class ShelfWindow : Window
 
     private void ApplyLayout()
     {
-        var panelWidth = _workspaceActive ? 320 : ExpandedWidth;
+        var panelWidth = _workspaceActive ? (Loc.IsEnglish ? 400 : 320) : ExpandedWidth;
         var panelHeight = _workspaceActive ? 520 : ExpandedHeight;
 
         if (_layoutApplying)
@@ -813,12 +815,12 @@ public partial class ShelfWindow : Window
         var filtered = scopeCount > 0 && visibleCount == 0;
         if (filtered)
         {
-            EmptyHint.Text = "没有匹配的条目。\n试试修改搜索词或类型筛选。";
+            EmptyHint.Text = Loc.Text("T38886F1E71CB");
         }
 
         FooterText.Text = _workspaceActive
-            ? visibleCount == scopeCount ? $"{scopeCount} 条 · 长期保留" : $"{visibleCount} / {scopeCount} 条 · 长期保留"
-            : visibleCount == scopeCount ? $"{scopeCount} / {_shelf.Capacity} 条" : $"{visibleCount} / {scopeCount} 条 · 上限 {_shelf.Capacity}";
+            ? visibleCount == scopeCount ? Loc.Format("T0D4A8EFBD7A0", scopeCount) : Loc.Format("TD11B59D9F9FC", visibleCount, scopeCount)
+            : visibleCount == scopeCount ? Loc.Format("T34150FD13BAD", scopeCount, _shelf.Capacity) : Loc.Format("T7BF70C081DEA", visibleCount, scopeCount, _shelf.Capacity);
         EmptyState.Visibility = visibleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
         ItemList.Visibility = visibleCount == 0 ? Visibility.Collapsed : Visibility.Visible;
 
@@ -899,11 +901,11 @@ public partial class ShelfWindow : Window
 
     private static string FilterKindLabel(ShelfFilterKind kind) => kind switch
     {
-        ShelfFilterKind.File => "文件",
-        ShelfFilterKind.Folder => "文件夹",
-        ShelfFilterKind.Image => "图片",
-        ShelfFilterKind.Text => "文字",
-        _ => "全部类型",
+        ShelfFilterKind.File => Loc.Text("T39932F24FE11"),
+        ShelfFilterKind.Folder => Loc.Text("T7C7802D8ADAE"),
+        ShelfFilterKind.Image => Loc.Text("TD24C10D37DB0"),
+        ShelfFilterKind.Text => Loc.Text("T14B69BD6EEB0"),
+        _ => Loc.Text("T267C4A7A86DD"),
     };
 
     /// <summary>启动时恢复上次的条目：刷新失效状态、丢弃过期项、清理孤儿缓存（FR-41 / FR-45）。</summary>
@@ -943,7 +945,7 @@ public partial class ShelfWindow : Window
 
                 if (expired > 0 || missing > 0)
                 {
-                    Status($"恢复 {kept.Count} 条（清理 {expired} 条过期 / {missing} 条失效）");
+                    Status(Loc.Format("TB76879DB156E", kept.Count, expired, missing));
                 }
             }
 
@@ -954,7 +956,7 @@ public partial class ShelfWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Status($"读取状态失败：{ex.Message}");
+            Status(Loc.Format("TC4F9C9505397", ex.Message));
         }
     }
 
@@ -979,7 +981,7 @@ public partial class ShelfWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Status($"保存状态失败：{ex.Message}");
+            Status(Loc.Format("TB8ECFE120641", ex.Message));
         }
     }
 
@@ -991,7 +993,7 @@ public partial class ShelfWindow : Window
         _statusTimer.Start();
     }
 
-    private void UpdateClearButton() => ClearButton.Content = _clearArmed ? "确认清空" : "清空";
+    private void UpdateClearButton() => ClearButton.Content = _clearArmed ? Loc.Text("T3C7A4FB3566D") : Loc.Text("T1EF3DE06B32E");
 
     // ── 展开 / 收起 ────────────────────────────────────────────────
 
@@ -1263,7 +1265,7 @@ public partial class ShelfWindow : Window
             added = 1;
         }
 
-        Status(added > 0 ? $"已放入 {added} 项" : "这个格式暂不支持（demo 仅支持文件与文字）");
+        Status(added > 0 ? Loc.Format("T288BE8D8D8DD", added) : Loc.Text("T6A73D7C4C6C9"));
         e.Handled = true;
     }
 
@@ -1379,11 +1381,11 @@ public partial class ShelfWindow : Window
         try
         {
             var effect = _dragOut.StartDrag(this, item);
-            Status(effect == DragDropEffects.None ? "目标没有接收" : "已拖出");
+            Status(effect == DragDropEffects.None ? Loc.Text("T187572F48A6C") : Loc.Text("TF3FF1BB30F4A"));
         }
         catch (Exception ex)
         {
-            Status($"拖出失败：{ex.Message}");
+            Status(Loc.Format("TA176BB33A352", ex.Message));
         }
         finally
         {
@@ -1442,7 +1444,7 @@ public partial class ShelfWindow : Window
         }
 
         var value = item.Path ?? item.Text ?? item.DisplayName;
-        Status(_clipboard.CopyPath(value) ? "已复制路径" : "复制失败，请重试（剪贴板可能被其他程序占用）");
+        Status(_clipboard.CopyPath(value) ? Loc.Text("T8764187F1DDD") : Loc.Text("T8F41785DBB7D"));
     }
 
     private void OnDeleteClick(object sender, RoutedEventArgs e)
@@ -1450,7 +1452,7 @@ public partial class ShelfWindow : Window
         if (ItemOf(sender) is { } item)
         {
             _shelf.Remove(item);
-            Status("已移除条目，原始文件未受影响");
+            Status(Loc.Text("TCB84D975D26B"));
         }
     }
 
@@ -1465,14 +1467,14 @@ public partial class ShelfWindow : Window
         var suggestion = NameRepair.Suggest(item.DisplayName);
         if (suggestion is null)
         {
-            Status("名称看起来正常，没有找到可修复的乱码");
+            Status(Loc.Text("T0D8800099E85"));
             return;
         }
 
         item.DisplayName = suggestion.Repaired;
         Status(item.Path is null
-            ? $"已修复显示名：{suggestion.Repaired}"
-            : "已修复显示名（如需同步文件名，用「重命名源文件为显示名」）");
+            ? Loc.Format("T9CAB136424A0", suggestion.Repaired)
+            : Loc.Text("TCFB8139E67D3"));
     }
 
     /// <summary>把磁盘文件重命名为当前显示名（FR-40）。属于修改用户文件，必须先确认。</summary>
@@ -1485,11 +1487,11 @@ public partial class ShelfWindow : Window
 
         if (item.Path is null)
         {
-            Status("该条目没有对应的磁盘文件");
+            Status(Loc.Text("T498D4062B5B1"));
             return;
         }
 
-        if (!Confirm($"把磁盘文件重命名为：\n\n{item.DisplayName}\n\n原文件不会被删除，但位置会改变。继续吗？"))
+        if (!Confirm(Loc.Format("T9218195C5C4A", item.DisplayName)))
         {
             return;
         }
@@ -1499,11 +1501,11 @@ public partial class ShelfWindow : Window
             var newPath = _renamer.Rename(item.Path, item.DisplayName);
             item.Path = newPath;
             item.RefreshState();
-            Status($"已重命名源文件：{item.DisplayName}");
+            Status(Loc.Format("T379980E9AEF4", item.DisplayName));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            Status($"重命名失败：{ex.Message}");
+            Status(Loc.Format("T1F4F8AA9FDF5", ex.Message));
         }
     }
 
@@ -1515,7 +1517,7 @@ public partial class ShelfWindow : Window
 
         try
         {
-            return MessageBox.Show(this, message, "中转站", MessageBoxButton.OKCancel, MessageBoxImage.Question)
+            return MessageBox.Show(this, message, Loc.Text("TC462A7D6AFC3"), MessageBoxButton.OKCancel, MessageBoxImage.Question)
                 == MessageBoxResult.OK;
         }
         finally
@@ -1536,7 +1538,7 @@ public partial class ShelfWindow : Window
             workspaceScope ? item.GroupId == groupId : item.GroupId is null);
         if (!hasItems)
         {
-            Status("这里已经是空的");
+            Status(Loc.Text("TE4DADD856E45"));
             return;
         }
 
@@ -1552,8 +1554,8 @@ public partial class ShelfWindow : Window
             _clearTimer.Stop();
             _clearTimer.Start();
             Status(workspaceScope
-                ? "再点一次确认清空当前分组（钉住的会保留，原始文件不受影响）"
-                : "再点一次确认清空临时区（钉住的会保留，原始文件不受影响）");
+                ? Loc.Text("TE8077C3F9E0E")
+                : Loc.Text("T667F720C30FE"));
             return;
         }
 
@@ -1573,11 +1575,11 @@ public partial class ShelfWindow : Window
     private void OnAddMenuClick(object sender, RoutedEventArgs e)
     {
         var menu = new ContextMenu();
-        var files = new MenuItem { Header = "添加文件…" };
+        var files = new MenuItem { Header = Loc.Text("T420EB33B4312") };
         files.Click += (_, _) => AddFilesFromDialog();
         menu.Items.Add(files);
 
-        var folder = new MenuItem { Header = "添加文件夹…" };
+        var folder = new MenuItem { Header = Loc.Text("TE59D03128CF3") };
         folder.Click += (_, _) => AddFolderFromDialog();
         menu.Items.Add(folder);
 
@@ -1608,7 +1610,7 @@ public partial class ShelfWindow : Window
         BatchBar.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
         RefreshBatchBar();
 
-        Status(enabled ? "点条目勾选，再点「复制所选内容」" : "已退出多选");
+        Status(enabled ? Loc.Text("T6189BC636BA5") : Loc.Text("T318BCD986433"));
     }
 
     /// <summary>
@@ -1649,7 +1651,7 @@ public partial class ShelfWindow : Window
         var selected = CurrentItems.Where(item => ItemList.SelectedItems.Contains(item)).ToList();
         if (selected.Count == 0)
         {
-            Status("先点条目勾选，再复制路径清单");
+            Status(Loc.Text("TB4E8688A2485"));
             return;
         }
 
@@ -1657,7 +1659,7 @@ public partial class ShelfWindow : Window
         var content = PathListFormatter.FormatContents(selected);
         if (string.IsNullOrEmpty(content))
         {
-            Status("勾中的条目没有可复制内容");
+            Status(Loc.Text("TD0BD98D7C035"));
             return;
         }
 
@@ -1673,13 +1675,13 @@ public partial class ShelfWindow : Window
 
         if (!copied)
         {
-            Status("复制失败，请重试（剪贴板可能被其他程序占用）");
+            Status(Loc.Text("T8F41785DBB7D"));
             return;
         }
 
         if (richText is not null)
         {
-            Status("已复制图文：Word/WPS/邮件可一次粘贴；微信用「复制文字」再粘一次", 8);
+            Status(Loc.Text("T953416ABF9A5"), 8);
             return;
         }
 
@@ -1687,14 +1689,14 @@ public partial class ShelfWindow : Window
         // 这不是复制失败，必须明说，否则用户会以为文字丢了。提示多留几秒。
         if (paths.Count > 0 && textCount > 0)
         {
-            Status($"已复制 {paths.Count} 条路径 + {textCount} 条文字；微信等应用只接收文件，"
-                + "文字需取消勾选文件后单独复制", 8);
+            Status(Loc.Format("T5F77648812A2", paths.Count, textCount)
+                + Loc.Text("T257AD1D42BE4"), 8);
             return;
         }
 
         Status(paths.Count == 0
-            ? $"已复制 {textCount} 条文字，去目标处 Ctrl+V"
-            : $"已复制 {paths.Count} 条路径，去目标处 Ctrl+V");
+            ? Loc.Format("TD8E4730C2CF4", textCount)
+            : Loc.Format("T53BDEB3CE908", paths.Count));
     }
 
     /// <summary>只复制勾选项里的文字（FR-21）：聊天窗口先粘文件、再粘文字，两次 Ctrl+V。</summary>
@@ -1707,18 +1709,18 @@ public partial class ShelfWindow : Window
 
         if (textItems.Count == 0)
         {
-            Status("勾选的条目里没有文字");
+            Status(Loc.Text("TC1682E555DEF"));
             return;
         }
 
         var content = string.Join(Environment.NewLine, textItems.Select(item => item.Text));
         if (!_clipboard.CopyText(content))
         {
-            Status("复制失败，请重试（剪贴板可能被其他程序占用）");
+            Status(Loc.Text("T8F41785DBB7D"));
             return;
         }
 
-        Status($"已复制 {textItems.Count} 条文字，去目标处 Ctrl+V", 5);
+        Status(Loc.Format("TD8E4730C2CF4", textItems.Count), 5);
     }
 
     private void UpdateBatchBar()
@@ -1746,9 +1748,9 @@ public partial class ShelfWindow : Window
     private void RefreshBatchBar()
     {
         var selected = ItemList.SelectedItems.Count;
-        BatchCountText.Text = $"已选 {selected} 项";
+        BatchCountText.Text = Loc.Format("T95D30BCA3924", selected);
         BatchSelectAllButton.Content =
-            selected > 0 && selected == ItemList.Items.Count ? "全不选" : "全选";
+            selected > 0 && selected == ItemList.Items.Count ? Loc.Text("TAB9084A640FB") : Loc.Text("T3A5040B68ABF");
     }
 
     private void OnTogglePinClick(object sender, RoutedEventArgs e)
@@ -1759,7 +1761,7 @@ public partial class ShelfWindow : Window
         }
 
         _shelf.TogglePin(item);
-        Status(item.Pinned ? "已钉住：不会被自动清理" : "已取消钉住");
+        Status(item.Pinned ? Loc.Text("T721273953A18") : Loc.Text("T3237CE5B0C3A"));
     }
 
     /// <summary>双击面板空白处收起（窗口不激活，Esc 收不到键盘事件，这里给一个鼠标替代）。</summary>
@@ -1783,7 +1785,7 @@ public partial class ShelfWindow : Window
     public void CollectFromClipboard()
     {
         if (!CanCollectInCurrentScope()) return;
-        var payload = Diagnostics.Measure("读取剪贴板", _clipboard.Read);
+        var payload = Diagnostics.Measure(Loc.Text("TE059F380BF07"), _clipboard.Read);
         var added = 0;
 
         if (payload.Files.Count > 0)
@@ -1806,12 +1808,12 @@ public partial class ShelfWindow : Window
             {
                 // 名字精确到秒：只到分钟的话，一分钟内连截两张图会得到完全一样的名字，
                 // 列表里两行长得一模一样。跨天也靠日期段区分。
-                _shelf.AddCachedImage(cached, $"截图 {DateTime.Now:MMdd-HHmmss}.png", CurrentGroupId);
+                _shelf.AddCachedImage(cached, Loc.Format("T46911832808D", DateTime.Now), CurrentGroupId);
                 added = 1;
             }
         }
 
-        Status(added > 0 ? $"已收录 {added} 项" : "剪贴板里没有可收录的内容");
+        Status(added > 0 ? Loc.Format("T5488835B893E", added) : Loc.Text("TC6DFC958A3B5"));
     }
 
     /// <summary>
@@ -1824,7 +1826,7 @@ public partial class ShelfWindow : Window
 
         using var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
-            Description = "添加文件夹到中转站",
+            Description = Loc.Text("T3A888C8205BC"),
             UseDescriptionForTitle = true,
             ShowNewFolderButton = false,
         };
@@ -1838,7 +1840,7 @@ public partial class ShelfWindow : Window
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             result = dialog.ShowDialog();
-            Diagnostics.LogSlow("打开文件夹选择框", watch.Elapsed);
+            Diagnostics.LogSlow(Loc.Text("TBED63B336F3C"), watch.Elapsed);
         }
         finally
         {
@@ -1852,7 +1854,7 @@ public partial class ShelfWindow : Window
         }
 
         _shelf.AddFile(dialog.SelectedPath, CurrentGroupId);
-        Status("已添加文件夹");
+        Status(Loc.Text("T6136A96A9473"));
     }
 
     /// <summary>手动选择文件加入（FR-14）。</summary>
@@ -1861,7 +1863,7 @@ public partial class ShelfWindow : Window
         if (!CanCollectInCurrentScope()) return;
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "添加到中转站",
+            Title = Loc.Text("T6AD0393DD043"),
             Multiselect = true,
             CheckFileExists = true,
         };
@@ -1876,7 +1878,7 @@ public partial class ShelfWindow : Window
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             result = dialog.ShowDialog(this);
-            Diagnostics.LogSlow("打开文件选择框", watch.Elapsed);
+            Diagnostics.LogSlow(Loc.Text("T5924ECEA4BB0"), watch.Elapsed);
         }
         finally
         {
@@ -1894,7 +1896,7 @@ public partial class ShelfWindow : Window
             _shelf.AddFile(file, CurrentGroupId);
         }
 
-        Status($"已添加 {dialog.FileNames.Length} 项");
+        Status(Loc.Format("TAB22C91F9C6F", dialog.FileNames.Length));
     }
 
     private void Open(ShelfItem item)
@@ -1908,11 +1910,11 @@ public partial class ShelfWindow : Window
         try
         {
             _shell.Open(item.Path!);
-            Status(item.Kind == ItemKind.Folder ? "已打开文件夹" : "已用默认程序打开");
+            Status(item.Kind == ItemKind.Folder ? Loc.Text("T307253E3D1F7") : Loc.Text("T3629A2412E4E"));
         }
         catch (Exception ex)
         {
-            Status($"打开失败：{ex.Message}");
+            Status(Loc.Format("TAB1A23440B70", ex.Message));
         }
     }
 
@@ -1925,7 +1927,7 @@ public partial class ShelfWindow : Window
         };
 
         // 失败时不再只说"被占用"：写入被拒绝的原因不止占用一种（见技术框架设计 6.5 与 error.log）
-        Status(ok ? "已复制，去目标处 Ctrl+V" : "复制失败，请重试（剪贴板可能被其他程序占用）");
+        Status(ok ? Loc.Text("TB31FA6F925AB") : Loc.Text("T8F41785DBB7D"));
     }
 
     private void Reveal(ShelfItem item)
@@ -1939,11 +1941,11 @@ public partial class ShelfWindow : Window
         try
         {
             _shell.Reveal(item.Path);
-            Status("已在资源管理器中定位");
+            Status(Loc.Text("TC0CBF1BBD88B"));
         }
         catch (Exception ex)
         {
-            Status($"定位失败：{ex.Message}");
+            Status(Loc.Format("T8C9FAA27FECF", ex.Message));
         }
     }
 

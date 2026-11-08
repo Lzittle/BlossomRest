@@ -24,7 +24,7 @@ if (-not $Compiler) { throw 'Supply -Compiler with the path to the Inno Setup 6 
 $Compiler = (Resolve-Path -LiteralPath $Compiler).Path
 $setup = Join-Path $PublishRoot ("BlossomRest-{0}-win-x64-setup.exe" -f $version)
 if (Test-Path -LiteralPath $setup) { throw 'Installer already exists; select a new publish output directory.' }
-foreach ($required in @('LICENSE.txt', 'USER-GUIDE.md', 'RELEASE-NOTES.md')) {
+foreach ($required in @('LICENSE.txt', 'USER-GUIDE.md', 'RELEASE-NOTES.md', 'USER-GUIDE.en.md', 'RELEASE-NOTES.en.md')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishDir $required))) { throw "Missing package attachment: $required" }
 }
 & $Compiler ('/DAppVersion=' + $version) ('/DPublishDir=' + $publishDir) ('/O' + $PublishRoot) (Join-Path $PSScriptRoot 'installer\BlossomRest.iss')

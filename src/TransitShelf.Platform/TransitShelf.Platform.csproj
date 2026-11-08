@@ -12,4 +12,5 @@
   <ItemGroup>
     <InternalsVisibleTo Include="TransitShelf.Tests" />
   </ItemGroup>
+  <ItemGroup><Using Include="TransitShelf.Core.Localization" /></ItemGroup>
 </Project>

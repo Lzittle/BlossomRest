@@ -35,9 +35,9 @@ public static class PaletteService
     /// <summary>配色菜单上显示的名字。跟随系统时把当前解析结果一并写出来，避免"跟了但看不出跟成什么"。</summary>
     public static string DisplayName(string? name) => Normalize(name) switch
     {
-        RosePineDawn => "Rosé Pine Dawn（浅色）",
-        System => $"跟随系统（当前{ThemeLabel()}）",
-        _ => "Catppuccin Frappe（深色）",
+        RosePineDawn => Loc.Text("T2A49A37AA385"),
+        System => Loc.Format("T81A097C21358", ThemeLabel()),
+        _ => Loc.Text("T90BB374BCD60"),
     };
 
     /// <summary>
@@ -97,7 +97,7 @@ public static class PaletteService
 
         var palette = new ResourceDictionary
         {
-            Source = new Uri(SourceFor(target), UriKind.Relative),
+            Source = new Uri($"/{typeof(PaletteService).Assembly.GetName().Name};component/{SourceFor(target)}", UriKind.Relative),
         };
 
         var merged = resources.MergedDictionaries;
@@ -115,7 +115,7 @@ public static class PaletteService
         Current = target;
     }
 
-    private static string ThemeLabel() => SystemThemeService.IsLightTheme() ? "浅色" : "深色";
+    private static string ThemeLabel() => SystemThemeService.IsLightTheme() ? Loc.Text("TAA0819DFC4D8") : Loc.Text("TA6B75D068032");
 
     private static string SourceFor(string name) => name switch
     {

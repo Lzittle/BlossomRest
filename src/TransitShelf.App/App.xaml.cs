@@ -13,7 +13,7 @@ public partial class App : Application
     private Mutex? _singleInstance;
     private System.Windows.Forms.NotifyIcon? _tray;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         // 常驻工具不应因为单次异常就整个退出（曾经就因为剪贴板被占用而崩溃消失）。
         DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -26,12 +26,15 @@ public partial class App : Application
             return;
         }
 
+        var language = await Task.Run(() => new TransitShelf.Core.Persistence.ItemStore(AppPaths.StateFile).LoadSnapshot().Settings.Language);
+        Loc.SetLanguage(language);
         base.OnStartup(e);
 
         var window = new ShelfWindow();
         MainWindow = window;
         window.Show();
         CreateTrayIcon(window);
+        Loc.LanguageChanged += OnLanguageChanged;
     }
 
     private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
@@ -70,7 +73,7 @@ public partial class App : Application
         _tray = new System.Windows.Forms.NotifyIcon
         {
             Icon = LoadTrayIcon(),
-            Text = "中转站",
+            Text = Loc.Text("TC462A7D6AFC3"),
             ContextMenuStrip = menu,
             Visible = true,
         };
@@ -87,7 +90,7 @@ public partial class App : Application
     {
         try
         {
-            using var stream = GetResourceStream(new Uri("Assets/TransitShelf.ico", UriKind.Relative))?.Stream;
+            using var stream = GetResourceStream(new Uri($"/{typeof(App).Assembly.GetName().Name};component/Assets/TransitShelf.ico", UriKind.Relative))?.Stream;
             return stream is null
                 ? System.Drawing.SystemIcons.Application
                 : new System.Drawing.Icon(stream);
@@ -99,8 +102,14 @@ public partial class App : Application
         }
     }
 
+    private void OnLanguageChanged()
+    {
+        if (_tray is not null) _tray.Text = Loc.IsEnglish ? "Blossom Rest" : Loc.Text("TC462A7D6AFC3");
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
+        Loc.LanguageChanged -= OnLanguageChanged;
         if (_tray is not null)
         {
             _tray.Visible = false;

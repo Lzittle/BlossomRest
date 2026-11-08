@@ -36,7 +36,7 @@ public static class NameSuggester
     /// 生成建议名。路径用于取父文件夹名，<paramref name="modifiedAt"/> 用于拼接日期；
     /// 文字条目、正常名称、无法生成不同名称时返回 <c>null</c>。
     /// </summary>
-    public static Suggestion? Suggest(ItemKind kind, string? displayName, string? path, DateTimeOffset modifiedAt)
+    public static Suggestion? Suggest(ItemKind kind, string? displayName, string? path, DateTimeOffset modifiedAt, string language = LanguagePreference.Chinese)
     {
         var name = displayName?.Trim();
         if (StemOf(kind, name) is not { } stem || !IsMachineGenerated(stem))
@@ -52,17 +52,17 @@ public static class NameSuggester
         if (parent is not null)
         {
             baseName = parent;
-            reason = $"名称是机器生成的，用所在文件夹「{parent}」作为线索。";
+            reason = Loc.FormatFor(language, "TAF762C776B58", parent);
         }
         else if (kind == ItemKind.Folder)
         {
-            baseName = "文件夹";
-            reason = "名称是机器生成的，所在目录没有可用线索，按条目类型命名。";
+            baseName = Loc.TextFor(language, "T7C7802D8ADAE");
+            reason = Loc.TextFor(language, "T03BB3D7C08D5");
         }
         else
         {
-            baseName = CategoryOf(extension);
-            reason = $"名称是机器生成的，所在目录没有可用线索，按扩展名类别「{baseName}」命名。";
+            baseName = CategoryOf(extension, language);
+            reason = Loc.FormatFor(language, "TB765C67BF909", baseName);
         }
 
         var date = modifiedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -136,19 +136,19 @@ public static class NameSuggester
     }
 
     /// <summary>扩展名类别词。未知扩展名统一归为「文件」，不猜测内容。</summary>
-    private static string CategoryOf(string extension) => extension.ToLowerInvariant() switch
+    private static string CategoryOf(string extension, string language) => extension.ToLowerInvariant() switch
     {
         ".png" or ".jpg" or ".jpeg" or ".gif" or ".bmp" or ".webp" or ".tif" or ".tiff"
-            or ".svg" or ".ico" or ".heic" or ".heif" or ".raw" or ".psd" => "图片",
+            or ".svg" or ".ico" or ".heic" or ".heif" or ".raw" or ".psd" => Loc.TextFor(language, "TD24C10D37DB0"),
         ".doc" or ".docx" or ".pdf" or ".txt" or ".md" or ".markdown" or ".rtf"
-            or ".odt" or ".pages" or ".epub" or ".mobi" or ".wps" or ".tex" => "文档",
-        ".xls" or ".xlsx" or ".xlsm" or ".csv" or ".tsv" or ".ods" or ".numbers" or ".et" => "表格",
-        ".ppt" or ".pptx" or ".pptm" or ".odp" or ".key" or ".dps" => "演示文稿",
+            or ".odt" or ".pages" or ".epub" or ".mobi" or ".wps" or ".tex" => Loc.TextFor(language, "T2687CCDBB1D2"),
+        ".xls" or ".xlsx" or ".xlsm" or ".csv" or ".tsv" or ".ods" or ".numbers" or ".et" => Loc.TextFor(language, "T22D9E7C54B88"),
+        ".ppt" or ".pptx" or ".pptm" or ".odp" or ".key" or ".dps" => Loc.TextFor(language, "T54F982631040"),
         ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".tgz" or ".bz2" or ".xz"
-            or ".cab" or ".iso" => "压缩包",
+            or ".cab" or ".iso" => Loc.TextFor(language, "T8F10DC147500"),
         ".mp3" or ".wav" or ".flac" or ".aac" or ".m4a" or ".ogg" or ".wma" or ".opus"
             or ".mp4" or ".mov" or ".avi" or ".mkv" or ".wmv" or ".webm" or ".flv"
-            or ".m4v" or ".mpeg" or ".mpg" or ".3gp" => "音视频",
-        _ => "文件",
+            or ".m4v" or ".mpeg" or ".mpg" or ".3gp" => Loc.TextFor(language, "TB89B44A5346D"),
+        _ => Loc.TextFor(language, "T39932F24FE11"),
     };
 }

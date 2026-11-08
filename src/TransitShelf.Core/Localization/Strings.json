@@ -1,0 +1,1397 @@
+[
+  {
+    "Id": "T028CFA95F7C9",
+    "Zh": "（没有可用的异常信息）",
+    "En": "(No error details available)"
+  },
+  {
+    "Id": "T02F92D7764F5",
+    "Zh": "移回临时区…",
+    "En": "Move back to Shelf…"
+  },
+  {
+    "Id": "T036A87E463AF",
+    "Zh": "重命名源文件为显示名",
+    "En": "Rename source file to display name"
+  },
+  {
+    "Id": "T037C31EC9ECF",
+    "Zh": "在文件夹中显示",
+    "En": "Show in File Explorer"
+  },
+  {
+    "Id": "T03BB3D7C08D5",
+    "Zh": "名称是机器生成的，所在目录没有可用线索，按条目类型命名。",
+    "En": "This name was generated automatically. No useful folder name was found, so the item type is used."
+  },
+  {
+    "Id": "T060F6F2A4DD2",
+    "Zh": "默认按类型：文件夹打开，文件、文字、图片复制。双击始终打开。",
+    "En": "By type: open folders; copy files, text and images. Double-click always opens."
+  },
+  {
+    "Id": "T094C73D93701",
+    "Zh": "（已修正为合法区间 {0}～{1}）",
+    "En": " (adjusted to the allowed range {0}–{1})"
+  },
+  {
+    "Id": "T09F12DA9A77F",
+    "Zh": "{0} 天前",
+    "En": "{0} days ago"
+  },
+  {
+    "Id": "T0AF75AB7CF2D",
+    "Zh": "无法确定目标目录",
+    "En": "Cannot determine the destination folder"
+  },
+  {
+    "Id": "T0D4A8EFBD7A0",
+    "Zh": "{0} 条 · 长期保留",
+    "En": "{0} items · kept indefinitely"
+  },
+  {
+    "Id": "T0D8800099E85",
+    "Zh": "名称看起来正常，没有找到可修复的乱码",
+    "En": "The name looks readable. No encoding fix was found."
+  },
+  {
+    "Id": "T0E1F5EB1F4D9",
+    "Zh": "已关闭工作区，回到单临时区模式",
+    "En": "Workspace disabled; showing the Shelf only"
+  },
+  {
+    "Id": "T0F7B958F6CA9",
+    "Zh": "最多创建 {0} 个分组",
+    "En": "You can create up to {0} groups"
+  },
+  {
+    "Id": "T13888A54EDAA",
+    "Zh": "重命名分组…",
+    "En": "Rename group…"
+  },
+  {
+    "Id": "T13B75B9DA9DE",
+    "Zh": "最多 80 个字；重名时自动追加编号。",
+    "En": "Up to 80 characters. A number is added if the name is already in use."
+  },
+  {
+    "Id": "T143822348704",
+    "Zh": "移回临时区后，将恢复上限与过期清理规则，可能立即淘汰最旧的未钉住条目。继续吗？",
+    "En": "Moving back to the Shelf restores item limits and expiry. The oldest unpinned items may be removed immediately. Continue?"
+  },
+  {
+    "Id": "T148A2509F47A",
+    "Zh": "选择分组…",
+    "En": "Choose group…"
+  },
+  {
+    "Id": "T14B69BD6EEB0",
+    "Zh": "文字",
+    "En": "Text"
+  },
+  {
+    "Id": "T161AE16AA7A2",
+    "Zh": " · 已钉住",
+    "En": " · pinned"
+  },
+  {
+    "Id": "T1778C4DF2C6E",
+    "Zh": "下载目录",
+    "En": "Downloads"
+  },
+  {
+    "Id": "T17FCCE30504D",
+    "Zh": "按显示名、路径或文字内容搜索",
+    "En": "Search display names, paths or text"
+  },
+  {
+    "Id": "T187572F48A6C",
+    "Zh": "目标没有接收",
+    "En": "The destination did not accept the item"
+  },
+  {
+    "Id": "T19A377F7F45D",
+    "Zh": "撤销失败：找不到原始目录",
+    "En": "Cannot undo: the original folder was not found"
+  },
+  {
+    "Id": "T1AD3D7ED00A2",
+    "Zh": "正在撤销移动…",
+    "En": "Undoing move…"
+  },
+  {
+    "Id": "T1BF9AA4B5187",
+    "Zh": "单击行为：统一打开",
+    "En": "Single click: always open"
+  },
+  {
+    "Id": "T1DB5818576F9",
+    "Zh": "微信接收目录",
+    "En": "WeChat received files"
+  },
+  {
+    "Id": "T1EF3DE06B32E",
+    "Zh": "清空",
+    "En": "Clear"
+  },
+  {
+    "Id": "T1F4F8AA9FDF5",
+    "Zh": "重命名失败：{0}",
+    "En": "Rename failed: {0}"
+  },
+  {
+    "Id": "T208B7DB5183F",
+    "Zh": "{0} · Ctrl+Alt+D 唤出 · Ctrl+Alt+C 收录",
+    "En": "{0} · Ctrl+Alt+D to show · Ctrl+Alt+C to collect"
+  },
+  {
+    "Id": "T21517C09A6E0",
+    "Zh": "类型筛选",
+    "En": "Type filter"
+  },
+  {
+    "Id": "T217CFE7DB1E3",
+    "Zh": "跟随系统",
+    "En": "Follow system"
+  },
+  {
+    "Id": "T22D9E7C54B88",
+    "Zh": "表格",
+    "En": "Spreadsheet"
+  },
+  {
+    "Id": "T239DC2012944",
+    "Zh": "请先新建一个工作区分组",
+    "En": "Create a Workspace group first"
+  },
+  {
+    "Id": "T257AD1D42BE4",
+    "Zh": "文字需取消勾选文件后单独复制",
+    "En": "deselect the files to copy text separately"
+  },
+  {
+    "Id": "T267C4A7A86DD",
+    "Zh": "全部类型",
+    "En": "All types"
+  },
+  {
+    "Id": "T2687CCDBB1D2",
+    "Zh": "文档",
+    "En": "Document"
+  },
+  {
+    "Id": "T26B7FE1FC1BF",
+    "Zh": "合法区间：上限 {0}～{1} 项，",
+    "En": "Allowed ranges: {0}–{1} items; "
+  },
+  {
+    "Id": "T27534D13173C",
+    "Zh": "深色适合常驻，浅色适合白天与投屏；跟随系统会随 Windows 主题自动切换。",
+    "En": "Choose a dark or light theme, or follow your Windows theme."
+  },
+  {
+    "Id": "T2786182F5043",
+    "Zh": "撤销失败：{0}；可稍后重试",
+    "En": "Undo failed: {0}. You can try again later."
+  },
+  {
+    "Id": "T288BE8D8D8DD",
+    "Zh": "已放入 {0} 项",
+    "En": "Added {0} items"
+  },
+  {
+    "Id": "T29636E43FDB4",
+    "Zh": "复制文字",
+    "En": "Copy text"
+  },
+  {
+    "Id": "T2A1B11A5D52A",
+    "Zh": "切换区域",
+    "En": "Switch area"
+  },
+  {
+    "Id": "T2A49A37AA385",
+    "Zh": "Rosé Pine Dawn（浅色）",
+    "En": "Rosé Pine Dawn (light)"
+  },
+  {
+    "Id": "T2AE75E168123",
+    "Zh": "配色",
+    "En": "Theme"
+  },
+  {
+    "Id": "T2BB74164020A",
+    "Zh": "上限：{0} 项（已淘汰 {1} 条，源文件仍在原处）{2}",
+    "En": "Limit: {0} items ({1} removed; source files unchanged){2}"
+  },
+  {
+    "Id": "T2C46D88280BA",
+    "Zh": "移动失败：{0}",
+    "En": "Move failed: {0}"
+  },
+  {
+    "Id": "T2CD0F3BE8738",
+    "Zh": "取消",
+    "En": "Cancel"
+  },
+  {
+    "Id": "T2FCE1D553FDA",
+    "Zh": "删除分组…",
+    "En": "Delete group…"
+  },
+  {
+    "Id": "T307253E3D1F7",
+    "Zh": "已打开文件夹",
+    "En": "Folder opened"
+  },
+  {
+    "Id": "T3154B5EAA176",
+    "Zh": "单击文件夹打开，文件、文字、图片复制。",
+    "En": "Single click opens folders and copies files, text and images."
+  },
+  {
+    "Id": "T318BCD986433",
+    "Zh": "已退出多选",
+    "En": "Selection mode closed"
+  },
+  {
+    "Id": "T322ECDE931AC",
+    "Zh": "修复乱码名称",
+    "En": "Fix unreadable name"
+  },
+  {
+    "Id": "T3237CE5B0C3A",
+    "Zh": "已取消钉住",
+    "En": "Unpinned"
+  },
+  {
+    "Id": "T335D44EE40B7",
+    "Zh": "隐藏悬浮球（不退出）",
+    "En": "Hide floating button (keep running)"
+  },
+  {
+    "Id": "T34150FD13BAD",
+    "Zh": "{0} / {1} 条",
+    "En": "{0} / {1} items"
+  },
+  {
+    "Id": "T3629A2412E4E",
+    "Zh": "已用默认程序打开",
+    "En": "Opened with the default app"
+  },
+  {
+    "Id": "T37979829426B",
+    "Zh": "工作区",
+    "En": "Workspace"
+  },
+  {
+    "Id": "T379980E9AEF4",
+    "Zh": "已重命名源文件：{0}",
+    "En": "Source file renamed: {0}"
+  },
+  {
+    "Id": "T38886F1E71CB",
+    "Zh": "没有匹配的条目。\n试试修改搜索词或类型筛选。",
+    "En": "No matching items.\nTry another search or type filter."
+  },
+  {
+    "Id": "T38DF957CBE0B",
+    "Zh": "启用工作区",
+    "En": "Enable Workspace"
+  },
+  {
+    "Id": "T39364D84BE9A",
+    "Zh": "配色：",
+    "En": "Theme: "
+  },
+  {
+    "Id": "T39932F24FE11",
+    "Zh": "文件",
+    "En": "File"
+  },
+  {
+    "Id": "T39AA210EACC6",
+    "Zh": "只复制勾选项里的文字，配合文件粘贴可避开聊天窗口只取一种格式的限制",
+    "En": "Copy selected text separately when a chat app only accepts files or text in one paste"
+  },
+  {
+    "Id": "T3A5040B68ABF",
+    "Zh": "全选",
+    "En": "All"
+  },
+  {
+    "Id": "T3A888C8205BC",
+    "Zh": "添加文件夹到中转站",
+    "En": "Add a folder to Blossom Rest"
+  },
+  {
+    "Id": "T3ABE206FAA92",
+    "Zh": "先新建一个分组",
+    "En": "Create a group first"
+  },
+  {
+    "Id": "T3B6FEFC50FEB",
+    "Zh": "小时",
+    "En": "hours"
+  },
+  {
+    "Id": "T3C66F1DE06FB",
+    "Zh": "退出时不再清空，条目留到下次启动",
+    "En": "Items will stay on the Shelf when you exit"
+  },
+  {
+    "Id": "T3C7A4FB3566D",
+    "Zh": "确认清空",
+    "En": "Confirm"
+  },
+  {
+    "Id": "T3D25DC0D43C5",
+    "Zh": "搜索名称、路径或文字",
+    "En": "Search names, paths or text"
+  },
+  {
+    "Id": "T3D2FDA2D0587",
+    "Zh": "中转站 · 设置",
+    "En": "Blossom Rest · Settings"
+  },
+  {
+    "Id": "T3D49D9FCB6D1",
+    "Zh": "新建分组",
+    "En": "New group"
+  },
+  {
+    "Id": "T3F240AE13B94",
+    "Zh": "复制文件到剪贴板",
+    "En": "Copy file to clipboard"
+  },
+  {
+    "Id": "T3FD47EDCE45B",
+    "Zh": "关闭",
+    "En": "Close"
+  },
+  {
+    "Id": "T420EB33B4312",
+    "Zh": "添加文件…",
+    "En": "Add files…"
+  },
+  {
+    "Id": "T42DA7978846F",
+    "Zh": "未钉住的条目超过这个时长后，下次启动时移出列表。",
+    "En": "Expired unpinned items are removed from the Shelf the next time you start the app."
+  },
+  {
+    "Id": "T4340C58ABC55",
+    "Zh": "[{0:O}] {1}失败：{2}{3}{4}",
+    "En": "[{0:O}] {1} failed: {2}{3}{4}"
+  },
+  {
+    "Id": "T452BDB2C5BB0",
+    "Zh": "自动收录已关闭",
+    "En": "Automatic collection is off"
+  },
+  {
+    "Id": "T461E085D5CA2",
+    "Zh": "多选",
+    "En": "Select"
+  },
+  {
+    "Id": "T46911832808D",
+    "Zh": "截图 {0:MMdd-HHmmss}.png",
+    "En": "Screenshot {0:MMdd-HHmmss}.png"
+  },
+  {
+    "Id": "T490A7B5C347E",
+    "Zh": "退出时清空临时区未钉住项；钉住项和工作区保留。",
+    "En": "Exit clears unpinned Shelf items. Pinned items and Workspace items are kept."
+  },
+  {
+    "Id": "T4929FDA5A0FB",
+    "Zh": "已关闭工作区，回到单临时区模式。",
+    "En": "Workspace disabled; showing the Shelf only."
+  },
+  {
+    "Id": "T4938F04D947C",
+    "Zh": "统一打开",
+    "En": "Always open"
+  },
+  {
+    "Id": "T49726F09C812",
+    "Zh": "定位",
+    "En": "Locate"
+  },
+  {
+    "Id": "T498D4062B5B1",
+    "Zh": "该条目没有对应的磁盘文件",
+    "En": "This item has no source file"
+  },
+  {
+    "Id": "T498E1D59B4D7",
+    "Zh": "退出",
+    "En": "Exit"
+  },
+  {
+    "Id": "T49CCDE43A154",
+    "Zh": "项",
+    "En": "items"
+  },
+  {
+    "Id": "T4A056D2C0567",
+    "Zh": "切换配色：",
+    "En": "Switch theme: "
+  },
+  {
+    "Id": "T4A88879EF6C3",
+    "Zh": "已取消开机自启",
+    "En": "Start with Windows disabled"
+  },
+  {
+    "Id": "T4C0BEA47C9D7",
+    "Zh": "只修改架子里的显示名，不改磁盘文件。应用吗？",
+    "En": "Only the display name on the shelf will change. The source file stays unchanged. Apply?"
+  },
+  {
+    "Id": "T4C45FC39F133",
+    "Zh": "建议名称：\n\n{0}\n\n理由：{1}\n\n",
+    "En": "Suggested name:\n\n{0}\n\nReason: {1}\n\n"
+  },
+  {
+    "Id": "T4FF6993363B8",
+    "Zh": "已跟随系统切换为 {0}",
+    "En": "System theme changed to {0}"
+  },
+  {
+    "Id": "T50EF2F4CF6A4",
+    "Zh": "新建",
+    "En": "New"
+  },
+  {
+    "Id": "T5132A187675F",
+    "Zh": "已启用工作区",
+    "En": "Workspace enabled"
+  },
+  {
+    "Id": "T5218CD8D059E",
+    "Zh": "重命名分组",
+    "En": "Rename group"
+  },
+  {
+    "Id": "T53BDEB3CE908",
+    "Zh": "已复制 {0} 条路径，去目标处 Ctrl+V",
+    "En": "Copied {0} paths. Press Ctrl+V in the destination app."
+  },
+  {
+    "Id": "T545868C5A891",
+    "Zh": "上限：{0} 项{1}",
+    "En": "Limit: {0} items{1}"
+  },
+  {
+    "Id": "T5488835B893E",
+    "Zh": "已收录 {0} 项",
+    "En": "Collected {0} items"
+  },
+  {
+    "Id": "T54F982631040",
+    "Zh": "演示文稿",
+    "En": "Presentation"
+  },
+  {
+    "Id": "T56410FC65314",
+    "Zh": "启动",
+    "En": "Startup"
+  },
+  {
+    "Id": "T5868EB4D2DD9",
+    "Zh": "组内都是文字，没有可复制的路径",
+    "En": "This group contains only text; there are no file paths to copy"
+  },
+  {
+    "Id": "T5924ECEA4BB0",
+    "Zh": "打开文件选择框",
+    "En": "Open file picker"
+  },
+  {
+    "Id": "T5A9B30BB9B0C",
+    "Zh": "当前查看区域",
+    "En": "Current area"
+  },
+  {
+    "Id": "T5BA65A74C4E7",
+    "Zh": "按类型",
+    "En": "By type"
+  },
+  {
+    "Id": "T5E168E5E702D",
+    "Zh": "配色：{0}",
+    "En": "Theme: {0}"
+  },
+  {
+    "Id": "T5F117A854064",
+    "Zh": "已创建分组：{0}",
+    "En": "Group created: {0}"
+  },
+  {
+    "Id": "T5F377BCFF98B",
+    "Zh": "单击行为：按类型（文件夹打开，其余复制）",
+    "En": "Single click: by type (open folders, copy other items)"
+  },
+  {
+    "Id": "T5F77648812A2",
+    "Zh": "已复制 {0} 条路径 + {1} 条文字；微信等应用只接收文件，",
+    "En": "Copied {0} paths and {1} text items. Apps such as WeChat may only accept files; "
+  },
+  {
+    "Id": "T6136A96A9473",
+    "Zh": "已添加文件夹",
+    "En": "Folder added"
+  },
+  {
+    "Id": "T6189BC636BA5",
+    "Zh": "点条目勾选，再点「复制所选内容」",
+    "En": "Select items, then choose Copy"
+  },
+  {
+    "Id": "T62EF217337E4",
+    "Zh": "当前查看：工作区 · {0}",
+    "En": "Viewing: Workspace · {0}"
+  },
+  {
+    "Id": "T63D90D977348",
+    "Zh": "复制",
+    "En": "Copy"
+  },
+  {
+    "Id": "T63F8D29140A6",
+    "Zh": "移动后可点「撤销移动」恢复。继续吗？",
+    "En": "You can use Undo move afterwards. Continue?"
+  },
+  {
+    "Id": "T6504A911F9E1",
+    "Zh": "{0} 小时前",
+    "En": "{0} hours ago"
+  },
+  {
+    "Id": "T6646D6EB7431",
+    "Zh": "过期时长：{0} 小时（下次启动生效）",
+    "En": "Expiry: {0} hours (applies on next start)"
+  },
+  {
+    "Id": "T667F720C30FE",
+    "Zh": "再点一次确认清空临时区（钉住的会保留，原始文件不受影响）",
+    "En": "Click again to clear the Shelf. Pinned items and source files are kept."
+  },
+  {
+    "Id": "T66F93FE5E906",
+    "Zh": "{0} 分钟前",
+    "En": "{0} minutes ago"
+  },
+  {
+    "Id": "T67D72596AF2F",
+    "Zh": "，淘汰 {0} 条，源文件未受影响",
+    "En": "; {0} removed, source files unchanged"
+  },
+  {
+    "Id": "T692989EB1DE7",
+    "Zh": "启用后可分组长期保存；关闭只隐藏入口，已有分组和条目会保留。",
+    "En": "Keep items in groups indefinitely. Disabling Workspace hides it without deleting groups or items."
+  },
+  {
+    "Id": "T6A73D7C4C6C9",
+    "Zh": "这个格式暂不支持（demo 仅支持文件与文字）",
+    "En": "This format is not supported here yet"
+  },
+  {
+    "Id": "T6AD0393DD043",
+    "Zh": "添加到中转站",
+    "En": "Add to Blossom Rest"
+  },
+  {
+    "Id": "T6D435951A749",
+    "Zh": "已移动到「{0}」；可撤销",
+    "En": "Moved to “{0}”. You can undo this move."
+  },
+  {
+    "Id": "T6E592BB1C5AC",
+    "Zh": "[{0:O}] {1} 用时 {2:F0} ms{3}",
+    "En": "[{0:O}] {1} took {2:F0} ms{3}"
+  },
+  {
+    "Id": "T6E6433AA4568",
+    "Zh": "复制所选内容",
+    "En": "Copy"
+  },
+  {
+    "Id": "T70416297388B",
+    "Zh": "删除分组「{0}」？\n\n组内条目将移回临时区并钉住，不参与自动清理。原始文件不受影响。",
+    "En": "Delete group “{0}”?\n\nIts items will move back to the Shelf and be pinned to prevent automatic cleanup. Source files stay unchanged."
+  },
+  {
+    "Id": "T71B4A91E0593",
+    "Zh": "选择分组",
+    "En": "Choose group"
+  },
+  {
+    "Id": "T721273953A18",
+    "Zh": "已钉住：不会被自动清理",
+    "En": "Pinned: excluded from automatic cleanup"
+  },
+  {
+    "Id": "T735E8099B3C6",
+    "Zh": "这个分组还是空的。\n拖入文件或收录剪贴板，条目将长期保留。",
+    "En": "This group is empty.\nDrop files here or collect from the clipboard to keep them indefinitely."
+  },
+  {
+    "Id": "T760FD5289D80",
+    "Zh": "已撤销移动，文件已回到原位置",
+    "En": "Move undone; the file is back in its original location"
+  },
+  {
+    "Id": "T78475E8F4A05",
+    "Zh": "已删除分组，{0} 条移回临时区并钉住",
+    "En": "Group deleted; {0} items moved back to the Shelf and pinned"
+  },
+  {
+    "Id": "T785D65C70FDE",
+    "Zh": "界面",
+    "En": "Appearance"
+  },
+  {
+    "Id": "T7990F2A3C44C",
+    "Zh": "收录剪贴板内容",
+    "En": "Collect clipboard"
+  },
+  {
+    "Id": "T79E09754E9E8",
+    "Zh": "已清空 {0} 项",
+    "En": "Cleared {0} items"
+  },
+  {
+    "Id": "T79E816018962",
+    "Zh": "撤销移动",
+    "En": "Undo move"
+  },
+  {
+    "Id": "T7A8A11EAD507",
+    "Zh": "添加",
+    "En": "Add"
+  },
+  {
+    "Id": "T7BF70C081DEA",
+    "Zh": "{0} / {1} 条 · 上限 {2}",
+    "En": "{0} / {1} items · limit {2}"
+  },
+  {
+    "Id": "T7C0AF31FF026",
+    "Zh": "已移入工作区分组，长期保留",
+    "En": "Moved to a Workspace group; kept indefinitely"
+  },
+  {
+    "Id": "T7C27592242B8",
+    "Zh": "当前区域",
+    "En": "Current area"
+  },
+  {
+    "Id": "T7C7802D8ADAE",
+    "Zh": "文件夹",
+    "En": "Folder"
+  },
+  {
+    "Id": "T7C92A48F7937",
+    "Zh": "勾选多条，一次复制成换行分隔的路径清单",
+    "En": "Select several items to copy their paths and text together"
+  },
+  {
+    "Id": "T7D85C01675E2",
+    "Zh": "该条目已经在这个文件夹中",
+    "En": "This item is already in that folder"
+  },
+  {
+    "Id": "T7D9A119A4CCD",
+    "Zh": "当前查看：临时区",
+    "En": "Viewing: Shelf"
+  },
+  {
+    "Id": "T7E41BCE8C475",
+    "Zh": "目标文件夹不存在：{0}",
+    "En": "Destination folder not found: {0}"
+  },
+  {
+    "Id": "T7E68BE07B17E",
+    "Zh": "已清空 {0} 项，保留 {1} 项已钉住",
+    "En": "Cleared {0} items; kept {1} pinned items"
+  },
+  {
+    "Id": "T7F8494360D08",
+    "Zh": "钉住",
+    "En": "Pin"
+  },
+  {
+    "Id": "T7FE7588AE29F",
+    "Zh": "已开启开机自启",
+    "En": "Start with Windows enabled"
+  },
+  {
+    "Id": "T80AD82C383FF",
+    "Zh": "已启用工作区，可在主面板顶部切换。",
+    "En": "Workspace enabled. Switch areas at the top of the panel."
+  },
+  {
+    "Id": "T81385C38C944",
+    "Zh": "删除条目",
+    "En": "Remove item"
+  },
+  {
+    "Id": "T81A097C21358",
+    "Zh": "跟随系统（当前{0}）",
+    "En": "Follow system (currently {0})"
+  },
+  {
+    "Id": "T870CFE52A7F5",
+    "Zh": "超出后最旧的条目移出列表，源文件仍在原处。",
+    "En": "The oldest items leave the Shelf when the limit is reached. Source files stay unchanged."
+  },
+  {
+    "Id": "T8764187F1DDD",
+    "Zh": "已复制路径",
+    "En": "Path copied"
+  },
+  {
+    "Id": "T89A7D926BD0E",
+    "Zh": "（未命名）",
+    "En": "(Untitled)"
+  },
+  {
+    "Id": "T8A90B938E02A",
+    "Zh": "这个名称看起来已经有语义，不需要建议",
+    "En": "This name is already readable; no suggestion is needed"
+  },
+  {
+    "Id": "T8B9E89F157E4",
+    "Zh": "临时区",
+    "En": "Shelf"
+  },
+  {
+    "Id": "T8C9FAA27FECF",
+    "Zh": "定位失败：{0}",
+    "En": "Could not locate the file: {0}"
+  },
+  {
+    "Id": "T8ED47D57B565",
+    "Zh": "源文件不存在，可能已被移动或删除",
+    "En": "The source file was not found. It may have been moved or deleted."
+  },
+  {
+    "Id": "T8F10DC147500",
+    "Zh": "压缩包",
+    "En": "Archive"
+  },
+  {
+    "Id": "T8F2C6D225756",
+    "Zh": "自动收录：{0}",
+    "En": "Automatic collection: {0}"
+  },
+  {
+    "Id": "T8F41785DBB7D",
+    "Zh": "复制失败，请重试（剪贴板可能被其他程序占用）",
+    "En": "Copy failed. Try again; another app may be using the clipboard."
+  },
+  {
+    "Id": "T90BB374BCD60",
+    "Zh": "Catppuccin Frappe（深色）",
+    "En": "Catppuccin Frappe (dark)"
+  },
+  {
+    "Id": "T90F467689BD6",
+    "Zh": "已取消开机自启。",
+    "En": "Start with Windows disabled."
+  },
+  {
+    "Id": "T91836403126E",
+    "Zh": "把刚才移动的文件移回原位置",
+    "En": "Move the last moved item back to its original location"
+  },
+  {
+    "Id": "T9218195C5C4A",
+    "Zh": "把磁盘文件重命名为：\n\n{0}\n\n原文件不会被删除，但位置会改变。继续吗？",
+    "En": "Rename the source file to:\n\n{0}\n\nThe source file will not be deleted, but its name will change. Continue?"
+  },
+  {
+    "Id": "T923BBEAD8E0E",
+    "Zh": "这个分组还是空的",
+    "En": "This group is empty"
+  },
+  {
+    "Id": "T930C3A619FE3",
+    "Zh": "把「{0}」移动到哪个文件夹",
+    "En": "Choose a destination folder for “{0}”"
+  },
+  {
+    "Id": "T953416ABF9A5",
+    "Zh": "已复制图文：Word/WPS/邮件可一次粘贴；微信用「复制文字」再粘一次",
+    "En": "Text and images copied. Paste together in Word, WPS or email; in WeChat, use Copy text for a second paste."
+  },
+  {
+    "Id": "T95D30BCA3924",
+    "Zh": "已选 {0} 项",
+    "En": "{0} selected"
+  },
+  {
+    "Id": "T96B1E25597B9",
+    "Zh": "分组已改名：{0}",
+    "En": "Group renamed: {0}"
+  },
+  {
+    "Id": "T9868CEC4010C",
+    "Zh": " · 已失效",
+    "En": " · missing"
+  },
+  {
+    "Id": "T99F0B4730748",
+    "Zh": "为哈希或机器生成的名字给出有语义的建议名；只改显示名，不改磁盘文件",
+    "En": "Suggest a readable display name for a generated name. The source file is not renamed."
+  },
+  {
+    "Id": "T9BDF2F70E4B0",
+    "Zh": "写入启动项失败，可能被安全软件或组策略拦截。",
+    "En": "Could not update startup settings. Security software or a system policy may be blocking it."
+  },
+  {
+    "Id": "T9C03083F7CA5",
+    "Zh": "退出时清空未钉住的条目",
+    "En": "Clear unpinned items on exit"
+  },
+  {
+    "Id": "T9CAB136424A0",
+    "Zh": "已修复显示名：{0}",
+    "En": "Display name fixed: {0}"
+  },
+  {
+    "Id": "T9F6FEE1ABA17",
+    "Zh": "语言",
+    "En": "Language"
+  },
+  {
+    "Id": "T9FE27CB4BB14",
+    "Zh": "决定临时区能放多少、留多久。",
+    "En": "Set how many items the Shelf keeps and when they expire."
+  },
+  {
+    "Id": "TA176BB33A352",
+    "Zh": "拖出失败：{0}",
+    "En": "Drag failed: {0}"
+  },
+  {
+    "Id": "TA3030BF8F16D",
+    "Zh": "保存",
+    "En": "Save"
+  },
+  {
+    "Id": "TA42551227E94",
+    "Zh": "正在监听 {0} 个目录，新文件会自动进架",
+    "En": "Watching {0} folders. New files will be added to the Shelf."
+  },
+  {
+    "Id": "TA4EAD4C7BB5F",
+    "Zh": "退出时不清空，条目留到下次启动。",
+    "En": "Items stay on the Shelf when you exit."
+  },
+  {
+    "Id": "TA5CB3CD51C2F",
+    "Zh": "取消钉住",
+    "En": "Unpin"
+  },
+  {
+    "Id": "TA6056189FF03",
+    "Zh": "将「{0}」移动到：\n\n{1}\n\n原文件会从当前位置移走；目标已有同名文件时自动追加序号，不会覆盖。",
+    "En": "Move “{0}” to:\n\n{1}\n\nThe source item will leave its current location. If the name is already in use, a number will be added; no files will be overwritten. "
+  },
+  {
+    "Id": "TA6A182E27EBD",
+    "Zh": "开启后顶部出现「临时区 / 工作区」标签，可把条目按用途分开放。",
+    "En": "Show Shelf and Workspace tabs so you can organize items by purpose."
+  },
+  {
+    "Id": "TA6A35AC2C894",
+    "Zh": "未命名分组",
+    "En": "Untitled group"
+  },
+  {
+    "Id": "TA6B75D068032",
+    "Zh": "深色",
+    "En": "dark"
+  },
+  {
+    "Id": "TA6D3D07A6844",
+    "Zh": "文件夹不能跨磁盘移动；请先在资源管理器中移动，再重新添加",
+    "En": "Folders cannot be moved between drives. Move the folder in File Explorer, then add it again."
+  },
+  {
+    "Id": "TA7DF79DE82A8",
+    "Zh": "无法确定文件所在目录",
+    "En": "Cannot determine the source folder"
+  },
+  {
+    "Id": "TA899DE6C4A5A",
+    "Zh": "新落到这些目录里的文件自动进临时区，默认关闭（红线 R6）。",
+    "En": "New files in these folders are added to the Shelf. Off by default."
+  },
+  {
+    "Id": "TAA0819DFC4D8",
+    "Zh": "浅色",
+    "En": "light"
+  },
+  {
+    "Id": "TAB1A23440B70",
+    "Zh": "打开失败：{0}",
+    "En": "Could not open the item: {0}"
+  },
+  {
+    "Id": "TAB22C91F9C6F",
+    "Zh": "已添加 {0} 项",
+    "En": "Added {0} items"
+  },
+  {
+    "Id": "TAB9084A640FB",
+    "Zh": "全不选",
+    "En": "None"
+  },
+  {
+    "Id": "TACFBC9DBE201",
+    "Zh": "已取消，名称未改变",
+    "En": "Cancelled; the name is unchanged"
+  },
+  {
+    "Id": "TAD8CA4718EE9",
+    "Zh": "新建分组并移入…",
+    "En": "New group and move here…"
+  },
+  {
+    "Id": "TADFF1D8892C5",
+    "Zh": "改动即时生效，无需重启。",
+    "En": "Changes apply immediately. No restart needed."
+  },
+  {
+    "Id": "TAF1A3DB60788",
+    "Zh": "文件可粘贴为附件，文字与路径按顺序保留；图文混合时 Word/WPS/邮件可一次粘贴",
+    "En": "Paste files as attachments; paths and text stay in order. Word, WPS and email can also paste text with images."
+  },
+  {
+    "Id": "TAF762C776B58",
+    "Zh": "名称是机器生成的，用所在文件夹「{0}」作为线索。",
+    "En": "This name was generated automatically. The parent folder “{0}” provides a useful name."
+  },
+  {
+    "Id": "TAFD4B783536B",
+    "Zh": "收起",
+    "En": "Hide"
+  },
+  {
+    "Id": "TB31FA6F925AB",
+    "Zh": "已复制，去目标处 Ctrl+V",
+    "En": "Copied. Press Ctrl+V in the destination app."
+  },
+  {
+    "Id": "TB37FBDD0F933",
+    "Zh": "清空临时区",
+    "En": "Clear Shelf"
+  },
+  {
+    "Id": "TB3DAE8320E66",
+    "Zh": "复制整组路径清单",
+    "En": "Copy all group paths"
+  },
+  {
+    "Id": "TB4E8688A2485",
+    "Zh": "先点条目勾选，再复制路径清单",
+    "En": "Select some items first, then choose Copy"
+  },
+  {
+    "Id": "TB57F49750C84",
+    "Zh": "自动收录",
+    "En": "Automatic collection"
+  },
+  {
+    "Id": "TB75D0263AF05",
+    "Zh": "目标目录重名过多：{0}",
+    "En": "Too many items with the same name in the destination: {0}"
+  },
+  {
+    "Id": "TB765C67BF909",
+    "Zh": "名称是机器生成的，所在目录没有可用线索，按扩展名类别「{0}」命名。",
+    "En": "This name was generated automatically. No useful folder name was found, so the file type “{0}” is used."
+  },
+  {
+    "Id": "TB76879DB156E",
+    "Zh": "恢复 {0} 条（清理 {1} 条过期 / {2} 条失效）",
+    "En": "Restored {0} items ({1} expired and {2} missing items removed)"
+  },
+  {
+    "Id": "TB89B44A5346D",
+    "Zh": "音视频",
+    "En": "Media"
+  },
+  {
+    "Id": "TB8ECFE120641",
+    "Zh": "保存状态失败：{0}",
+    "En": "Could not save items: {0}"
+  },
+  {
+    "Id": "TB97C49ACB930",
+    "Zh": "复制路径",
+    "En": "Copy path"
+  },
+  {
+    "Id": "TBACF8C4F7FFE",
+    "Zh": "清理策略",
+    "En": "Cleanup"
+  },
+  {
+    "Id": "TBB6D995724F4",
+    "Zh": "管理",
+    "En": "Manage"
+  },
+  {
+    "Id": "TBBC9BB5B951F",
+    "Zh": "自动收录设置已更新。",
+    "En": "Automatic collection settings updated."
+  },
+  {
+    "Id": "TBED63B336F3C",
+    "Zh": "打开文件夹选择框",
+    "En": "Open folder picker"
+  },
+  {
+    "Id": "TBFD3F6070F7D",
+    "Zh": "移动到文件夹…",
+    "En": "Move to folder…"
+  },
+  {
+    "Id": "TC0B3FBFF51CC",
+    "Zh": "完成",
+    "En": "Done"
+  },
+  {
+    "Id": "TC0C92C80DE37",
+    "Zh": "临时区上限",
+    "En": "Shelf item limit"
+  },
+  {
+    "Id": "TC0CBF1BBD88B",
+    "Zh": "已在资源管理器中定位",
+    "En": "Located in File Explorer"
+  },
+  {
+    "Id": "TC133A47D40C3",
+    "Zh": "正在移动…",
+    "En": "Moving…"
+  },
+  {
+    "Id": "TC1682E555DEF",
+    "Zh": "勾选的条目里没有文字",
+    "En": "There is no text in the selection"
+  },
+  {
+    "Id": "TC42B4CE2F7EF",
+    "Zh": "不能把文件夹移动到它自己内部",
+    "En": "A folder cannot be moved into itself"
+  },
+  {
+    "Id": "TC462A7D6AFC3",
+    "Zh": "中转站",
+    "En": "Blossom Rest"
+  },
+  {
+    "Id": "TC4F9C9505397",
+    "Zh": "读取状态失败：{0}",
+    "En": "Could not load items: {0}"
+  },
+  {
+    "Id": "TC6BCB3A08D35",
+    "Zh": "，跳过 {0} 条文字",
+    "En": "; skipped {0} text items"
+  },
+  {
+    "Id": "TC6DFC958A3B5",
+    "Zh": "剪贴板里没有可收录的内容",
+    "En": "The clipboard has nothing to collect"
+  },
+  {
+    "Id": "TC771248E511F",
+    "Zh": "打开",
+    "En": "Open"
+  },
+  {
+    "Id": "TC86781D620D5",
+    "Zh": "单击行为：统一复制",
+    "En": "Single click: always copy"
+  },
+  {
+    "Id": "TC97FB6E5E317",
+    "Zh": "把文件、文件夹或文字拖进来。\n单击：文件夹打开 / 其余复制；双击打开；按住条目可拖到其他应用。",
+    "En": "Drop files, folders or text here.\nClick to open folders or copy other items. Double-click to open. Drag items to another app."
+  },
+  {
+    "Id": "TCA5D66880F40",
+    "Zh": "显示中转站",
+    "En": "Show Blossom Rest"
+  },
+  {
+    "Id": "TCB84D975D26B",
+    "Zh": "已移除条目，原始文件未受影响",
+    "En": "Item removed; the source file is unchanged"
+  },
+  {
+    "Id": "TCD37925B4E85",
+    "Zh": "已移动到「{0}」，同名已改为「{1}」；可撤销",
+    "En": "Moved to “{0}”; renamed to “{1}” to avoid a conflict. You can undo this move."
+  },
+  {
+    "Id": "TCDB8BBE5DB23",
+    "Zh": "未选择分组",
+    "En": "No group selected"
+  },
+  {
+    "Id": "TCE3349FFC2BA",
+    "Zh": "过期时长",
+    "En": "Expiry"
+  },
+  {
+    "Id": "TCF42BB2B0421",
+    "Zh": "收录",
+    "En": "Collect"
+  },
+  {
+    "Id": "TCFB8139E67D3",
+    "Zh": "已修复显示名（如需同步文件名，用「重命名源文件为显示名」）",
+    "En": "Display name fixed. To also rename the source file, use Rename source file to display name."
+  },
+  {
+    "Id": "TD076F701DAB3",
+    "Zh": "更新开机自启失败，可能被安全软件或组策略拦截",
+    "En": "Could not update startup settings. Security software or a system policy may be blocking it."
+  },
+  {
+    "Id": "TD0BD98D7C035",
+    "Zh": "勾中的条目没有可复制内容",
+    "En": "The selection has nothing to copy"
+  },
+  {
+    "Id": "TD11B59D9F9FC",
+    "Zh": "{0} / {1} 条 · 长期保留",
+    "En": "{0} / {1} items · kept indefinitely"
+  },
+  {
+    "Id": "TD24C10D37DB0",
+    "Zh": "图片",
+    "En": "Image"
+  },
+  {
+    "Id": "TD2A3D6F7E011",
+    "Zh": "自动收录下载目录",
+    "En": "Auto-collect Downloads"
+  },
+  {
+    "Id": "TD2A4B5890F65",
+    "Zh": "同名文件已存在：{0}",
+    "En": "A file with that name already exists: {0}"
+  },
+  {
+    "Id": "TD550BFD2CDCE",
+    "Zh": "退出时清空临时区未钉住项，钉住项和工作区保留",
+    "En": "Exit clears unpinned Shelf items. Pinned items and Workspace items are kept."
+  },
+  {
+    "Id": "TD7E266BDC806",
+    "Zh": "分组名称",
+    "En": "Group name"
+  },
+  {
+    "Id": "TD8E4730C2CF4",
+    "Zh": "已复制 {0} 条文字，去目标处 Ctrl+V",
+    "En": "Copied {0} text items. Press Ctrl+V in the destination app."
+  },
+  {
+    "Id": "TD91FA07BB5B9",
+    "Zh": "登录 Windows 后自动启动并收成悬浮球。系统「设置 → 应用 → 启动」里能看到同一项，也能在那边关闭。",
+    "En": "Start as a floating button when you sign in. You can also turn this off in Windows Settings > Apps > Startup."
+  },
+  {
+    "Id": "TD9A7D99966A0",
+    "Zh": "只更改程序界面，文件名、文字和分组名保持原文。",
+    "En": "Only the app language changes. File names, text and group names stay as you entered them."
+  },
+  {
+    "Id": "TDA9FC8BA9497",
+    "Zh": "设置…",
+    "En": "Settings…"
+  },
+  {
+    "Id": "TDB78B9AE8010",
+    "Zh": "自动收录微信接收目录",
+    "En": "Auto-collect WeChat files"
+  },
+  {
+    "Id": "TDBD2B9D64CE4",
+    "Zh": "复制文字到剪贴板",
+    "En": "Copy text to clipboard"
+  },
+  {
+    "Id": "TDE38B92AD247",
+    "Zh": "开机自启",
+    "En": "Start with Windows"
+  },
+  {
+    "Id": "TDE6785D99E02",
+    "Zh": "刚刚",
+    "En": "Just now"
+  },
+  {
+    "Id": "TDF3D58C7D84B",
+    "Zh": "设置",
+    "En": "Settings"
+  },
+  {
+    "Id": "TE059F380BF07",
+    "Zh": "读取剪贴板",
+    "En": "Read clipboard"
+  },
+  {
+    "Id": "TE131580715EF",
+    "Zh": "数据目录必须为绝对路径。",
+    "En": "The data folder must use an absolute path."
+  },
+  {
+    "Id": "TE2E1AE44D93C",
+    "Zh": "按条目类型筛选",
+    "En": "Filter by item type"
+  },
+  {
+    "Id": "TE355E4BFDB6F",
+    "Zh": "添加文件或文件夹到中转站",
+    "En": "Add files or folders to Blossom Rest"
+  },
+  {
+    "Id": "TE42E343CCCB4",
+    "Zh": "已复制 {0} 条路径",
+    "En": "Copied {0} paths"
+  },
+  {
+    "Id": "TE484BD72C004",
+    "Zh": "时长 {0}～{1} 小时。超出会自动修正。",
+    "En": "{0}–{1} hours. Values outside these ranges are adjusted automatically."
+  },
+  {
+    "Id": "TE4DADD856E45",
+    "Zh": "这里已经是空的",
+    "En": "Nothing to clear"
+  },
+  {
+    "Id": "TE52F51632C8A",
+    "Zh": "建议名称",
+    "En": "Suggest a name"
+  },
+  {
+    "Id": "TE59D03128CF3",
+    "Zh": "添加文件夹…",
+    "En": "Add folder…"
+  },
+  {
+    "Id": "TE5F1E0FFFC8F",
+    "Zh": "单击任意条目都复制；双击行为不变。",
+    "En": "Single click copies any item. Double-click still opens it."
+  },
+  {
+    "Id": "TE6CE1C7B644F",
+    "Zh": "钉入工作区 / 移动到分组",
+    "En": "Move to Workspace / group"
+  },
+  {
+    "Id": "TE8077C3F9E0E",
+    "Zh": "再点一次确认清空当前分组（钉住的会保留，原始文件不受影响）",
+    "En": "Click again to clear this group. Pinned items and source files are kept."
+  },
+  {
+    "Id": "TE8EA4E67BC7A",
+    "Zh": "已登记开机自启；可在系统「设置 → 应用 → 启动」中查看。",
+    "En": "Start with Windows enabled. You can check it in Windows Settings > Apps > Startup."
+  },
+  {
+    "Id": "TEC49EA83A2A0",
+    "Zh": "开启后退出会清空临时区未钉住的条目。钉住项和工作区始终保留，源文件不受影响。",
+    "En": "When enabled, exit clears unpinned Shelf items. Pinned items, Workspace items and source files are kept."
+  },
+  {
+    "Id": "TEE1B789562CF",
+    "Zh": "已移回临时区",
+    "En": "Moved back to the Shelf"
+  },
+  {
+    "Id": "TEEC3D62C707A",
+    "Zh": "单击任意条目都打开；双击行为不变。",
+    "En": "Single click opens any item. Double-click still opens it."
+  },
+  {
+    "Id": "TEFD3EC5E9B37",
+    "Zh": "已应用建议名：{0}（如需同步文件名，用「重命名源文件为显示名」）",
+    "En": "Suggested name applied: {0}. To also rename the source file, use Rename source file to display name."
+  },
+  {
+    "Id": "TF1B381976776",
+    "Zh": "把剪贴板里的文字、文件或图片收进来（Ctrl+Alt+C）",
+    "En": "Collect clipboard text, files or images (Ctrl+Alt+C)"
+  },
+  {
+    "Id": "TF1D87E7EEB76",
+    "Zh": "已撤销移动；原位置已有同名文件，落位为「{0}」",
+    "En": "Move undone. The original name is already in use, so the file is named “{0}”."
+  },
+  {
+    "Id": "TF30528EEE828",
+    "Zh": "已选 0 项",
+    "En": "0 selected"
+  },
+  {
+    "Id": "TF3FF1BB30F4A",
+    "Zh": "已拖出",
+    "En": "Dragged out"
+  },
+  {
+    "Id": "TF4A5B15D4C8F",
+    "Zh": "{0} · 部分快捷键被其他软件占用",
+    "En": "{0} · Some shortcuts are used by another app"
+  },
+  {
+    "Id": "TF7672EC59588",
+    "Zh": "搜索条目",
+    "En": "Search items"
+  },
+  {
+    "Id": "TFA0ECD5D377E",
+    "Zh": "退出行为",
+    "En": "On exit"
+  },
+  {
+    "Id": "TFA9692CD1A65",
+    "Zh": "统一复制",
+    "En": "Always copy"
+  },
+  {
+    "Id": "TFAF3EBB1527C",
+    "Zh": "复制混合内容到剪贴板",
+    "En": "Copy mixed content to clipboard"
+  },
+  {
+    "Id": "TFC641E6743D1",
+    "Zh": "单击条目",
+    "En": "Single click"
+  },
+  {
+    "Id": "TFE4298A1A7C0",
+    "Zh": "把文件或文件夹移到指定目录；同名自动加序号，不覆盖；可撤销",
+    "En": "Move files or folders to another folder. Name conflicts get a number; nothing is overwritten. Supports undo."
+  },
+  {
+    "Id": "TFE99B3AEDC74",
+    "Zh": "把常用资料放在工作区，长期保留。\n先新建一个分组。",
+    "En": "Keep useful items in Workspace groups.\nCreate a group to get started."
+  }
+]

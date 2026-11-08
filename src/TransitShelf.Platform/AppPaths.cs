@@ -20,7 +20,7 @@ public static class AppPaths
 
         if (!Path.IsPathFullyQualified(configuredRoot))
         {
-            throw new ArgumentException("数据目录必须为绝对路径。", nameof(configuredRoot));
+            throw new ArgumentException(Loc.Text("TE131580715EF"), nameof(configuredRoot));
         }
 
         return Path.GetFullPath(configuredRoot);

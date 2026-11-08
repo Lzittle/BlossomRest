@@ -48,23 +48,23 @@ internal static class ShelfActions
     {
         var actions = new List<MenuItemSpec>
         {
-            new("收录剪贴板内容", () => window.CollectFromClipboard()),
-            new("添加文件…", () => window.AddFilesFromDialog()),
-            new("添加文件夹…", () => window.AddFolderFromDialog()),
+            new(Loc.Text("T7990F2A3C44C"), () => window.CollectFromClipboard()),
+            new(Loc.Text("T420EB33B4312"), () => window.AddFilesFromDialog()),
+            new(Loc.Text("TE59D03128CF3"), () => window.AddFolderFromDialog()),
             MenuItemSpec.Separator,
 
             // 自动收录开关（默认关闭，见红线 R6）。勾选态每次展开时重取，
             // 避免菜单固化在构建那一刻、与设置窗口里的实际值不一致。
-            new("自动收录下载目录",
+            new(Loc.Text("TD2A3D6F7E011"),
                 () => window.SetWatchDownloads(!window.Settings.WatchDownloads),
                 IsChecked: () => window.Settings.WatchDownloads),
-            new("自动收录微信接收目录",
+            new(Loc.Text("TDB78B9AE8010"),
                 () => window.SetWatchWeChat(!window.Settings.WatchWeChat),
                 IsChecked: () => window.Settings.WatchWeChat),
             MenuItemSpec.Separator,
 
             // 设置：清理策略、退出清空、工作区开关都收进独立窗口（FR-72 / FR-74 / FR-75）。
-            new("设置…", () => window.ShowSettings()),
+            new(Loc.Text("TDA9FC8BA9497"), () => window.ShowSettings()),
             MenuItemSpec.Separator,
 
             // 配色（FR-73）：一条"切换到 X"的条目，直接写出目标方案名——
@@ -75,19 +75,19 @@ internal static class ShelfActions
         if (includePanelVisibility)
         {
             // 「显示/收起」互斥，用可用性表达：已经展开时"显示"没有效果，置灰比点了没反应好。
-            actions.Add(new("显示中转站", () => window.ShowPanel(), IsEnabled: () => !window.IsPanelExpanded));
-            actions.Add(new("收起", () => window.CollapsePanel(), IsEnabled: () => window.IsPanelExpanded));
+            actions.Add(new(Loc.Text("TCA5D66880F40"), () => window.ShowPanel(), IsEnabled: () => !window.IsPanelExpanded));
+            actions.Add(new(Loc.Text("TAFD4B783536B"), () => window.CollapsePanel(), IsEnabled: () => window.IsPanelExpanded));
         }
 
         if (includePillHide)
         {
             // 与「退出」分开：这里只隐藏窗口，进程、托盘、快捷键与条目都保留（FR-09 / ADR D31）。
-            actions.Add(new("隐藏悬浮球（不退出）", () => window.HidePill()));
+            actions.Add(new(Loc.Text("T335D44EE40B7"), () => window.HidePill()));
         }
 
-        actions.Add(new("清空临时区", () => window.ClearAll()));
+        actions.Add(new(Loc.Text("TB37FBDD0F933"), () => window.ClearAll()));
         actions.Add(MenuItemSpec.Separator);
-        actions.Add(new("退出", () => Application.Current.Shutdown()));
+        actions.Add(new(Loc.Text("T498E1D59B4D7"), () => Application.Current.Shutdown()));
         return actions;
     }
 
@@ -95,7 +95,7 @@ internal static class ShelfActions
     private static string PaletteText(ShelfWindow window)
     {
         var active = PaletteService.Normalize(window.Settings.Palette);
-        return "切换配色：" + PaletteService.DisplayName(PaletteService.Next(active));
+        return Loc.Text("T4A056D2C0567") + PaletteService.DisplayName(PaletteService.Next(active));
     }
 
     /// <summary>翻译成 WPF 菜单项（悬浮球 / 面板右键用）。</summary>

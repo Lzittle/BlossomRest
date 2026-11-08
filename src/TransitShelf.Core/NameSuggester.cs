@@ -44,7 +44,7 @@ public static class NameSuggester
             return null;
         }
 
-        var extension = kind == ItemKind.File ? Path.GetExtension(name) : string.Empty;
+        var extension = kind == ItemKind.File ? Path.GetExtension(name) ?? string.Empty : string.Empty;
         var parent = ParentFolderName(path);
 
         string baseName;

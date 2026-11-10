@@ -75,8 +75,8 @@ Windows 桌面上一个常驻置顶的小浮窗。把散落在微信接收目录
 ## 环境要求
 
 - Windows 10 1809 及以上，或 Windows 11（64 位）
-- 默认发布包为自包含版，无需另装 .NET；框架依赖版才需要 .NET 8 桌面运行时
-- 开发构建需要 .NET 8 SDK；包装脚本自动查找 SDK，并把开发缓存留在仓库目录
+- 默认发布包为自包含版，无需另装 .NET；框架依赖版才需要 .NET 10 桌面运行时
+- 开发构建需要 global.json 指定的 .NET 10 SDK；可运行 `.\scripts\install-sdk.ps1` 安装到仓库内，开发入口优先使用它，缓存也留在仓库目录
 
 ## 构建与运行
 
@@ -90,7 +90,7 @@ Windows 桌面上一个常驻置顶的小浮窗。把散落在微信接收目录
 
 ```powershell
 .\scripts\publish.ps1                          # 自包含，用户免装 .NET 桌面运行时
-.\scripts\publish.ps1 -SelfContained:$false    # 框架依赖，需用户已装 .NET 8 桌面运行时
+.\scripts\publish.ps1 -SelfContained:$false    # 框架依赖，需用户已装 .NET 10 桌面运行时
 .\scripts\publish.ps1 -Output D:\some\dir      # 自定义输出目录
 ```
 
@@ -136,10 +136,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-release.ps1
 冒烟与压测脚本请指定 Release 构建：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\verify-smoke.ps1 -Exe .\src\TransitShelf.App\bin\Release\net8.0-windows\TransitShelf.exe
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-smoke.ps1 -Exe .\src\TransitShelf.App\bin\Release\net10.0-windows\TransitShelf.exe
 ```
 
-当前交付为 **0.1.0 双语测试版**：同一程序在设置中即时切换简体中文和英文，语言选择会保存；新安装跟随系统，旧状态保持中文，用户内容不翻译。Release 构建零警告/零错误，184 个单元测试及双语切换、复制、重启检查通过。提供自包含便携 ZIP、中英文安装向导和使用说明，验收使用独立数据目录。资源目标仍为收起空闲私有内存 ≤ 110 MB、100 条引用增长 ≤ 30 MB；曾有单次空闲超标，长时资源稳定性仍需观察。多屏缩放、输入法焦点、跨应用投递及完整交互的手工验收尚未完成，当前未签名，也未宣告正式公开发布。
+当前交付为 **0.1.0 双语测试版**，采用 .NET 10 LTS。同一程序在设置中即时切换简体中文和英文，语言选择会保存；新安装跟随系统，旧状态保持中文，用户内容不翻译。Release 构建零警告/零错误，188 个单元测试通过，覆盖旧版单击行为字符串的读取与写回。提供自包含便携 ZIP、中英文安装向导和使用说明，验收使用独立数据目录。资源目标仍为收起空闲私有内存 ≤ 110 MB、100 条引用增长 ≤ 30 MB；首次启动曾测得约 2 秒，尚未满足 < 1.5 秒目标，长时资源稳定性仍需观察。多屏缩放、输入法焦点、跨应用投递及完整交互的手工验收尚未完成，当前未签名，也未宣告正式公开发布。
 
 日常操作见[使用说明](docs/USER-GUIDE.md)，当前功能范围与限制见[版本说明](docs/RELEASE-NOTES.md)。
 

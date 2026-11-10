@@ -64,6 +64,13 @@ internal static class Program
             {
                 for (var i = 0; i < 200 && (app.MainWindow is not ShelfWindow candidate || !candidate.IsLoaded); i++) await Task.Delay(50);
                 if (app.MainWindow is not ShelfWindow main || !main.IsLoaded) throw new InvalidOperationException("Main window did not finish loading.");
+                if (!resume)
+                {
+                    var pill = (Border)main.FindName("PillPanel");
+                    var brand = ((Grid)pill.Child).Children.OfType<Image>().Single();
+                    Check("brand bitmap decode budget", brand.Source is BitmapSource bitmap && bitmap.PixelWidth == 128 && bitmap.PixelHeight == 128);
+                    Capture(main, Path.Combine(root, "shelf-collapsed.en.png"));
+                }
                 main.ShowPanel();
                 await Idle();
                 Check(resume ? "persisted English startup" : "English startup title", main.Title == "Blossom Rest");
@@ -84,6 +91,7 @@ internal static class Program
                     Check("English header avoids overlap", actionsLeft >= titleRight + 4);
                     await Task.Delay(3500);
                     Capture(main, Path.Combine(root, "shelf-items.en.png"));
+                    Check("English tray first open", OpenTray(app).Any(text => text.StartsWith("Settings", StringComparison.Ordinal)));
                     var settings = new SettingsWindow(main) { ShowActivated = false, Owner = main };
                     settings.Show();
                     await Idle();
@@ -94,6 +102,7 @@ internal static class Program
                     await Idle();
                     Check("live switch to Chinese", main.Title == "中转站" && settings.Title == "中转站 · 设置");
                     Check("Chinese dynamic panel", ((TextBlock)main.FindName("PanelTitle")).Text == "临时区");
+                    Check("Chinese tray updates on open", OpenTray(app).Any(text => text.StartsWith("设置", StringComparison.Ordinal)));
                     ((Button)settings.FindName("EnglishLanguageButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     await Idle();
                     Check("live switch back to English", main.Title == "Blossom Rest" && settings.Title == "Blossom Rest · Settings");
@@ -140,6 +149,18 @@ internal static class Program
         var result = app.Run();
         if (!completed) throw new InvalidOperationException("The application exited before UI verification completed.");
         return result;
+    }
+
+    private static IReadOnlyList<string> OpenTray(TransitShelf.App.App app)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var tray = typeof(TransitShelf.App.App).GetField("_tray", flags)!.GetValue(app)!;
+        var menu = tray.GetType().GetProperty("ContextMenuStrip")!.GetValue(tray)!;
+        var opening = new System.ComponentModel.CancelEventArgs(true);
+        menu.GetType().GetMethod("OnOpening", flags)!.Invoke(menu, [opening]);
+        if (opening.Cancel) throw new InvalidOperationException("Tray opening was cancelled after population.");
+        return ((System.Collections.IEnumerable)menu.GetType().GetProperty("Items")!.GetValue(menu)!)
+            .Cast<object>().Select(item => item.GetType().GetProperty("Text")!.GetValue(item)?.ToString() ?? string.Empty).ToArray();
     }
 
     private static async Task<string> ReadClipboard()

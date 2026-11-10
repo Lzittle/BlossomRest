@@ -47,8 +47,12 @@
             42px 显示时约低 2.4 像素，所以整体上移 2.4 做视觉居中。
           -->
           <Image Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center"
-                 Source="/TransitShelf;component/Assets/brand-rose.png"
                  RenderOptions.BitmapScalingMode="HighQuality">
+            <Image.Source>
+              <!-- 42 DIP 在 200% 下仅需 84px；按 128px 解码，避免常驻完整 1024px 位图。 -->
+              <BitmapImage UriSource="/TransitShelf;component/Assets/brand-rose.png"
+                           DecodePixelWidth="128" CacheOption="OnLoad" />
+            </Image.Source>
             <Image.RenderTransform>
               <TranslateTransform Y="-2.4" />
             </Image.RenderTransform>

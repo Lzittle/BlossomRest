@@ -22,6 +22,7 @@ cache/
 
 # 本地构建环境（dotnet 用户目录与包缓存，见 scripts/dev.ps1）
 .dotnet-home/
+.dotnet-sdk/
 .nuget/
 
 # 临时文件

@@ -16,8 +16,13 @@ public static class ShelfStateCodec
         // 中文直接写入，便于用户肉眼检查 state.json
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         // 枚举写小写（file / folder / text），与文档中的示例 schema 保持一致
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+        Converters =
+        {
+            new JsonStringEnumConverter<ItemKind>(JsonNamingPolicy.CamelCase),
+            new JsonStringEnumConverter<ShelfClickBehavior>(JsonNamingPolicy.CamelCase),
+        },
     };
+    private static readonly ShelfStateJsonContext Context = new(Options);
 
     public static string Serialize(IEnumerable<ShelfItem> items)
         => Serialize(items, new ShelfSettings());
@@ -37,7 +42,7 @@ public static class ShelfStateCodec
             Settings = settings,
         };
 
-        return JsonSerializer.Serialize(state, Options);
+        return JsonSerializer.Serialize(state, Context.ShelfStateRecord);
     }
 
     public static IReadOnlyList<ShelfItem> Deserialize(string json)
@@ -49,7 +54,7 @@ public static class ShelfStateCodec
     public static (IReadOnlyList<ShelfItem> Items, IReadOnlyList<ShelfGroup> Groups, ShelfSettings Settings)
         DeserializeSnapshot(string json)
     {
-        var state = JsonSerializer.Deserialize<ShelfStateRecord>(json, Options);
+        var state = JsonSerializer.Deserialize(json, Context.ShelfStateRecord);
         if (state?.Items is null)
         {
             return ([], [], new ShelfSettings());

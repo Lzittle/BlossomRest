@@ -6,7 +6,7 @@ Version: 0.1.0 test build. Windows 10 1809+ / Windows 11, x64.
 
 Run `BlossomRest-0.1.0-win-x64-setup.exe` and follow the Chinese or English wizard. Installation is per user, without administrator rights. It does not enable automatic startup or launch the app for you. Open Blossom Rest from the Start menu after installation.
 
-For the portable version, extract the entire ZIP and run `TransitShelf.exe` inside `BlossomRest-win-x64`. Keep the supporting files beside the executable. The default package includes the .NET runtime.
+For the portable version, extract the entire ZIP and run `TransitShelf.exe` inside `BlossomRest-win-x64`. Keep the supporting files beside the executable. The default package includes the .NET 10 desktop runtime. Only packages explicitly marked framework-dependent need a separate .NET 10 desktop runtime installation.
 
 In Settings, choose Follow system, 简体中文 or English under Language. The interface updates immediately and the choice survives restart. Existing state files without a language field keep Chinese; new installations follow Windows. User-entered names, text, paths and groups stay unchanged. Standard system file-picker buttons follow Windows' own language.
 

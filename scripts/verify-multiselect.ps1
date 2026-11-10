@@ -23,7 +23,7 @@ are built from code points instead.
 #>
 param(
     [string] $StateFile,
-    [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe')
+    [string] $Exe
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,6 +49,9 @@ public delegate bool EnumProc(IntPtr h, IntPtr l);
 [DllImport("user32.dll", SetLastError=true)] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
 [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, IntPtr extra);
 public static string ClickAt(IntPtr expectedWindow, int x, int y, int left, int top, int right, int bottom) {
+  // Reapply on the actual invocation thread; UI Automation may cross COM contexts.
+  if (SetThreadDpiAwarenessContext(new IntPtr(-4)) == IntPtr.Zero)
+    throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
   // Keep the test window visible without activating it; never click a covering app.
   if (!SetWindowPos(expectedWindow, new IntPtr(-1), 0, 0, 0, 0, 0x0013))
     throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
@@ -57,6 +60,7 @@ public static string ClickAt(IntPtr expectedWindow, int x, int y, int left, int 
   System.Threading.Thread.Sleep(150);
   Point p;
   bool obtained = GetPhysicalCursorPos(out p);
+  Console.WriteLine("DIAGNOSTIC pointer expected=" + x + "," + y + " actual=" + p.X + "," + p.Y + " readable=" + obtained);
   // Mixed-DPI cursor conversion can round a physical point by a few pixels.
   // Require the actual pointer to stay inside this exact item, rather than pixel equality.
   if (!obtained || p.X < left || p.X >= right || p.Y < top || p.Y >= bottom)
@@ -122,7 +126,6 @@ function Stop-App {
 }
 
 function Start-App {
-    $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
     Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden | Out-Null
     Start-Sleep -Seconds 5
 }

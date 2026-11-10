@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- 必须与被测项目一致：Core 是 net8.0-windows -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- 目标框架继承仓库 Directory.Build.props，与被测项目保持一致。 -->
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 

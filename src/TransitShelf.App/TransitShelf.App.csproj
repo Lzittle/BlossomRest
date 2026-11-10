@@ -6,6 +6,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>TransitShelf.App</RootNamespace>
     <AssemblyName>TransitShelf</AssemblyName>
+    <!-- Release 分发预编译，减少首次启动 JIT；不裁剪、不改变 WPF 技术栈。 -->
+    <PublishReadyToRun Condition="'$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' == 'win-x64'">true</PublishReadyToRun>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- exe 自身的图标：任务栏、资源管理器、右键属性都读它。用带玫瑰的文件夹主视觉，8 个尺寸 -->
     <ApplicationIcon>Assets\TransitShelf.ico</ApplicationIcon>

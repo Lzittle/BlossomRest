@@ -138,35 +138,46 @@ internal static class ShelfActions
         bool includePanelVisibility,
         bool includePillHide = false)
     {
-        foreach (var action in Build(window, includePanelVisibility, includePillHide))
+        void Populate()
         {
-            if (action.IsSeparator)
+            menu.SuspendLayout();
+            try
             {
-                menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-                continue;
+                foreach (var action in Build(window, includePanelVisibility, includePillHide))
+                {
+                    if (action.IsSeparator)
+                    {
+                        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+                        continue;
+                    }
+
+                    var item = new System.Windows.Forms.ToolStripMenuItem(action.Text);
+                    var invoke = action.Invoke;
+                    item.Click += (_, _) => invoke?.Invoke();
+
+                    if (action.IsChecked is { } isChecked)
+                    {
+                        item.CheckOnClick = true;
+                        item.Checked = isChecked();
+                    }
+
+                    if (action.IsEnabled is { } enabled)
+                    {
+                        item.Enabled = enabled();
+                    }
+
+                    menu.Items.Add(item);
+                }
             }
-
-            var item = new System.Windows.Forms.ToolStripMenuItem(action.Text);
-            var invoke = action.Invoke;
-            item.Click += (_, _) => invoke?.Invoke();
-
-            if (action.IsChecked is { } isChecked)
-            {
-                item.CheckOnClick = true;
-                item.Checked = isChecked();
-            }
-
-            if (action.IsEnabled is { } enabled)
-            {
-                item.Enabled = enabled();
-            }
-
-            menu.Items.Add(item);
+            finally { menu.ResumeLayout(); }
         }
 
         // 每次展开前重新同步勾选/可用性——用户可能在设置窗口改过开关。
-        menu.Opening += (_, _) =>
+        menu.Opening += (_, opening) =>
         {
+            // 首次右键再创建菜单，启动时不为不可见菜单测量字体与布局。
+            if (menu.Items.Count == 0) Populate();
+            opening.Cancel = menu.Items.Count == 0;
             var items = menu.Items.OfType<System.Windows.Forms.ToolStripMenuItem>().ToList();
             var source = Build(window, includePanelVisibility, includePillHide)
                 .Where(a => !a.IsSeparator)

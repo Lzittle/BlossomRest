@@ -6,9 +6,8 @@ Usage:
   .\scripts\dev.ps1 run --project src\TransitShelf.App
   .\scripts\dev.ps1 test
 
-Why this wrapper exists: the .NET SDK used by this project lives in the user
-profile (%LOCALAPPDATA%\Microsoft\dotnet) and is not added to the system PATH.
-It also keeps the SDK/NuGet state inside the repository (.dotnet-home, .nuget).
+This wrapper prefers the optional repository-local SDK (.dotnet-sdk), honors
+global.json, and keeps SDK/NuGet state in the repository (.dotnet-home, .nuget).
 
 IMPORTANT: keep this file ASCII-only. Windows PowerShell 5.1 reads .ps1 files
 without a BOM as ANSI (GBK on zh-CN systems), which corrupts non-ASCII text.
@@ -33,21 +32,42 @@ New-Item -ItemType Directory -Force -Path $env:DOTNET_CLI_HOME, $env:NUGET_PACKA
 # "C:\Program Files\dotnet" may hold the runtime only (no sdk/ directory),
 # which makes "dotnet build" fail with "No .NET SDKs were found".
 $candidates = @(
+    (Join-Path $root '.dotnet-sdk\dotnet.exe'),
     'D:\SDK-install\dotnet\dotnet.exe',
     (Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet\dotnet.exe'),
     (Join-Path ${env:ProgramFiles} 'dotnet\dotnet.exe')
 )
 
-$dotnet = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-if (-not $dotnet) {
-    throw 'dotnet not found. Install the .NET SDK first (see docs/tech-framework section 9).'
+$onPath = Get-Command dotnet.exe -ErrorAction SilentlyContinue
+if ($onPath) { $candidates += $onPath.Source }
+$dotnet = $null
+$requiredSdk = [version] (Get-Content -LiteralPath (Join-Path $root 'global.json') -Raw -Encoding UTF8 | ConvertFrom-Json).sdk.version
+$featureBand = $requiredSdk.Build - ($requiredSdk.Build % 100)
+Push-Location $root
+try {
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $candidate)) { continue }
+        # Listing does not fail when global.json cannot be satisfied by an older host.
+        $installedSdks = & $candidate --list-sdks 2>$null
+        foreach ($line in $installedSdks) {
+            if ($line -notmatch '^(\d+\.\d+\.\d+)\s') { continue }
+            $installed = [version] $Matches[1]
+            if ($installed.Major -eq $requiredSdk.Major -and $installed.Minor -eq $requiredSdk.Minor -and
+                $installed.Build -ge $requiredSdk.Build -and $installed.Build -lt ($featureBand + 100)) {
+                $dotnet = $candidate
+                break
+            }
+        }
+        if ($dotnet) { break }
+    }
 }
-
-$sdk = & $dotnet --list-sdks 2>$null
-if (-not $sdk) {
-    throw "No SDK found under $dotnet (runtime only). Install the .NET SDK first."
+finally { Pop-Location }
+if (-not $dotnet) {
+    throw 'Compatible .NET 10 SDK not found. Run scripts\install-sdk.ps1 or install the SDK specified by global.json.'
 }
 
 Write-Host "dotnet: $dotnet" -ForegroundColor DarkGray
-& $dotnet @Arguments
-exit $LASTEXITCODE
+Push-Location $root
+try { & $dotnet @Arguments; $commandExit = $LASTEXITCODE }
+finally { Pop-Location }
+exit $commandExit

@@ -7,6 +7,7 @@ Keep ASCII-only for Windows PowerShell 5.1.
 param([string] $Exe, [switch] $SkipBuild)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'build-paths.ps1')
 if (@(Get-Process -Name TransitShelf -ErrorAction SilentlyContinue).Count -gt 0) {
     throw 'Exit TransitShelf from the tray before release verification. No process was stopped.'
 }
@@ -47,15 +48,21 @@ try {
         Get-Content -LiteralPath $testLog -Encoding UTF8 | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0) { throw 'Unit tests failed.' }
     }
-    if (-not $Exe) { $Exe = Join-Path $root 'src\TransitShelf.App\bin\Release\net8.0-windows\TransitShelf.exe' }
+    if (-not $Exe) { $Exe = Get-AppBuildExe -Configuration Release }
     $Exe = (Resolve-Path -LiteralPath $Exe).Path
     foreach ($case in @('collect', 'watch', 'multiselect', 'smoke', 'stress')) {
         $script = Join-Path $PSScriptRoot ("verify-{0}.ps1" -f $case)
         $state = Join-Path $runRoot ($case + '\state.json')
         Write-Host ("COMMAND: powershell -NoProfile -ExecutionPolicy Bypass -File {0} -Exe {1} -StateFile {2}" -f $script, $Exe, $state)
         $caseLog = Join-Path $runRoot ($case + '.log')
-        & powershell -NoProfile -ExecutionPolicy Bypass -File $script -Exe $Exe -StateFile $state 2>&1 | Out-File -LiteralPath $caseLog -Encoding UTF8
-        $code = $LASTEXITCODE
+        # Preserve full child stderr and exit code, then continue collecting other cases.
+        $oldErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & powershell -NoProfile -ExecutionPolicy Bypass -File $script -Exe $Exe -StateFile $state 2>&1 | Out-File -LiteralPath $caseLog -Encoding UTF8 -Width 4096
+            $code = $LASTEXITCODE
+        }
+        finally { $ErrorActionPreference = $oldErrorAction }
         Get-Content -LiteralPath $caseLog -Encoding UTF8 | ForEach-Object { Write-Host $_ }
         Write-Host ("RESULT: {0} exit={1}" -f $case, $code)
         if ($code -ne 0) { $failed += $case }

@@ -488,7 +488,10 @@ public static class NativeMethods
                 }
             }
 
-            if (!OpenClipboard(IntPtr.Zero))
+            // Win32 要求 EmptyClipboard / SetClipboardData 关联有效的本进程窗口。
+            // NULL 所有者不符合 API 约定，也会使新版 OLE 对剪贴板所有权的判断不一致。
+            var owner = ClipboardOwnerWindow.GetForCurrentThread();
+            if (owner == IntPtr.Zero || !OpenClipboard(owner))
             {
                 return false; // 被别的进程占用，交给上层重试
             }

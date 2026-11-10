@@ -4,7 +4,7 @@ Repeatable smoke / stability check for the desktop app.
 Usage:
   .\scripts\dev.ps1 build -c Release
   powershell -ExecutionPolicy Bypass -File scripts\verify-smoke.ps1 `
-      -Exe src\TransitShelf.App\bin\Release\net8.0-windows\TransitShelf.exe
+      -Exe src\TransitShelf.App\bin\Release\net10.0-windows\TransitShelf.exe
 
 Checks:
   NFR-03  cold start to a visible window < 1.5 s
@@ -21,7 +21,7 @@ IMPORTANT: keep this file ASCII-only (see dev.ps1).
 #>
 param(
     [string] $StateFile,
-    [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe'),
+    [string] $Exe,
     [ValidateSet('zh-CN', 'en')] [string] $Language = 'zh-CN'
 )
 
@@ -121,7 +121,6 @@ function Restore-Data {
 }
 
 function Start-AppTimed {
-    $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
     $process = Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden -PassThru
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
     $handle = [IntPtr]::Zero

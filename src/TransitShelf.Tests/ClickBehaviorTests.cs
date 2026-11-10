@@ -51,6 +51,20 @@ public class ClickBehaviorTests
         Assert.Equal(ShelfClickBehavior.AlwaysCopy, loaded.ClickBehavior);
     }
 
+    [Theory]
+    [InlineData("byKind", ShelfClickBehavior.ByKind)]
+    [InlineData("alwaysOpen", ShelfClickBehavior.AlwaysOpen)]
+    [InlineData("alwaysCopy", ShelfClickBehavior.AlwaysCopy)]
+    public void 保留旧版单击行为字符串格式(string storedValue, ShelfClickBehavior expected)
+    {
+        var legacy = "{\"schemaVersion\":3,\"items\":[],\"settings\":{\"clickBehavior\":\"" + storedValue + "\"}}";
+        var (_, _, settings) = ShelfStateCodec.DeserializeSnapshot(legacy);
+        Assert.Equal(expected, settings.ClickBehavior);
+
+        using var saved = System.Text.Json.JsonDocument.Parse(ShelfStateCodec.Serialize([], settings));
+        Assert.Equal(storedValue, saved.RootElement.GetProperty("settings").GetProperty("clickBehavior").GetString());
+    }
+
     /// <summary>旧配置没有 clickBehavior 字段时，必须落到"按类型"而不是别的行为。</summary>
     [Fact]
     public void 旧配置缺少字段时默认按类型()

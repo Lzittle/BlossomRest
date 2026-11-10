@@ -106,6 +106,25 @@ public class ClipboardServiceTests
         }));
     }
 
+    [Fact]
+    public void 连续切换纯文字与混合复制后文件文字和RTF均可读回()
+    {
+        RunSta(() => WithClipboardPreserved(() =>
+        {
+            var service = new ClipboardService();
+            const string rtf = @"{\rtf1\ansi retained}";
+            for (var index = 0; index < 10; index++)
+            {
+                var text = "连续复制 " + index;
+                AssertClipboardAccepts(() => service.CopyText("previous " + index), "复制前序文字");
+                AssertClipboardAccepts(() => service.CopyMixed(SamplePaths, text, rtf), "连续混合复制");
+                Assert.Equal(SamplePaths, ReadClipboard(() => Clipboard.GetFileDropList().Cast<string>().ToArray()));
+                Assert.Equal(text, ReadClipboard(Clipboard.GetText));
+                Assert.Equal(rtf, ReadClipboard(() => Clipboard.GetData(DataFormats.Rtf) as string));
+            }
+        }));
+    }
+
     /// <summary>
     /// 重试到超时为止：剪贴板被别的程序短暂占用是常态，不该判成失败；
     /// 超过窗口仍写不进去，说明这条通道真的坏了（或环境把它长期占住了）。

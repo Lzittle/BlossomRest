@@ -5,7 +5,7 @@ crash recovery and zero-copy / zero-modification guarantees.
 Usage:
   .\scripts\dev.ps1 build -c Release
   powershell -ExecutionPolicy Bypass -File scripts\verify-stress.ps1 `
-      -Exe src\TransitShelf.App\bin\Release\net8.0-windows\TransitShelf.exe
+      -Exe src\TransitShelf.App\bin\Release\net10.0-windows\TransitShelf.exe
 
 Checks:
   FR-10 / NFR-09  120 files collected as references, capacity trims to 99, no copies on disk
@@ -21,7 +21,7 @@ IMPORTANT: keep this file ASCII-only (see dev.ps1).
 #>
 param(
     [string] $StateFile,
-    [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe'),
+    [string] $Exe,
     [int] $FileCount = 120,
     [int] $Capacity = 99
 )
@@ -121,7 +121,6 @@ function Restore-Data {
 }
 
 function Start-App {
-    $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
     return (Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden -PassThru)
 }
 

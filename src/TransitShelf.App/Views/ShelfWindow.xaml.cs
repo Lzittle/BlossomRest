@@ -109,7 +109,9 @@ public partial class ShelfWindow : Window
     private ShelfFilterKind _filterKind = ShelfFilterKind.All;
     private bool _itemViewReady;
 
-    public ShelfWindow()
+    public ShelfWindow() : this(null) { }
+
+    internal ShelfWindow((IReadOnlyList<ShelfItem> Items, IReadOnlyList<ShelfGroup> Groups, ShelfSettings Settings)? initialState)
     {
         InitializeComponent();
 
@@ -186,7 +188,7 @@ public partial class ShelfWindow : Window
         Closed += OnClosed;
         ApplyLayout();
         RefreshWorkspace();
-        LoadState();
+        LoadState(initialState);
         Loc.LanguageChanged += RefreshLanguage;
         _clockTimer.Start();
     }
@@ -909,13 +911,13 @@ public partial class ShelfWindow : Window
     };
 
     /// <summary>启动时恢复上次的条目：刷新失效状态、丢弃过期项、清理孤儿缓存（FR-41 / FR-45）。</summary>
-    private void LoadState()
+    private void LoadState((IReadOnlyList<ShelfItem> Items, IReadOnlyList<ShelfGroup> Groups, ShelfSettings Settings)? initialState)
     {
         try
         {
             AppPaths.EnsureCreated();
 
-            var (items, groups, settings) = _store.LoadSnapshot();
+            var (items, groups, settings) = initialState ?? _store.LoadSnapshot();
             _settings = settings;
             _customMonitor = settings.WindowMonitor;
             _customLeftPx = settings.WindowLeftPx;

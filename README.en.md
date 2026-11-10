@@ -12,7 +12,7 @@ This is the **0.1.0 test build** for Windows 10 1809+ and Windows 11, x64.
 
 - Installer: run `BlossomRest-0.1.0-win-x64-setup.exe`. It installs for the current user without administrator rights.
 - Portable ZIP: extract the entire archive and run `TransitShelf.exe` inside `BlossomRest-win-x64`.
-- The default packages are self-contained. You do not need to install .NET separately.
+- The default packages include the .NET 10 LTS desktop runtime. You do not need to install .NET separately.
 - Both languages use the same program and data. Open **Settings → Language** to choose **Follow system**, **简体中文** or **English**. Changes apply immediately and are saved.
 - A new installation follows your Windows display language; a pre-existing state file without a language setting keeps Chinese.
 
@@ -49,13 +49,13 @@ Chat apps may accept only one clipboard format per paste. Use **Copy text** for 
 
 ## Current limits
 
-This test build is unsigned. Multi-monitor placement, 125%/150%/200% scaling, input-method focus and cross-app delivery still need broader hands-on testing. Video thumbnails depend on Windows codecs. The app has no online updater.
+This test build is unsigned. First launch has taken about 2 seconds in testing, above the 1.5-second target. Multi-monitor placement, 125%/150%/200% scaling, input-method focus and cross-app delivery still need broader hands-on testing. Video thumbnails depend on Windows codecs. The app has no online updater.
 
 See the [user guide](docs/USER-GUIDE.en.md) and [release notes](docs/RELEASE-NOTES.en.md).
 
 ## Build from source
 
-Windows and the .NET 8 SDK are required. This project uses C# and WPF, with no web UI shell.
+Windows and the .NET 10 SDK specified in `global.json` are required. Run `.\scripts\install-sdk.ps1` to install a verified SDK inside the repository, or use a matching system SDK. This project uses C# and WPF, with no web UI shell.
 
 ```powershell
 .\scripts\dev.ps1 build -c Release

@@ -15,7 +15,7 @@ payload is built from code points instead.
 #>
 param(
     [string] $StateFile,
-    [string] $Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) 'src\TransitShelf.App\bin\Debug\net8.0-windows\TransitShelf.exe')
+    [string] $Exe
 )
 
 $ErrorActionPreference = 'Stop'
@@ -101,7 +101,6 @@ function Restore-Data {
 }
 
 function Start-App {
-    $env:DOTNET_ROOT = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
     Start-Process -FilePath $Exe -WorkingDirectory (Split-Path -Parent $Exe) -WindowStyle Hidden | Out-Null
     Start-Sleep -Seconds 5
 }

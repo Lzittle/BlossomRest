@@ -26,11 +26,11 @@ public partial class App : Application
             return;
         }
 
-        var language = await Task.Run(() => new TransitShelf.Core.Persistence.ItemStore(AppPaths.StateFile).LoadSnapshot().Settings.Language);
-        Loc.SetLanguage(language);
+        var initialState = await Task.Run(() => new TransitShelf.Core.Persistence.ItemStore(AppPaths.StateFile).LoadSnapshot());
+        Loc.SetLanguage(initialState.Settings.Language);
         base.OnStartup(e);
 
-        var window = new ShelfWindow();
+        var window = new ShelfWindow(initialState);
         MainWindow = window;
         window.Show();
         CreateTrayIcon(window);

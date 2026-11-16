@@ -282,10 +282,11 @@ public partial class ShelfWindow : Window
         }
 
         _layoutRefreshPending = true;
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+        // WPF 会在 Loaded 优先级补一次缩放布局，等它完成后再同步物理窗口。
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
             _layoutRefreshPending = false;
-            ApplyLayout();
+            ApplyLayout(refreshPhysicalSize: true);
         }));
     }
 
@@ -618,7 +619,7 @@ public partial class ShelfWindow : Window
         }
     }
 
-    private void ApplyLayout()
+    private void ApplyLayout(bool refreshPhysicalSize = false)
     {
         var panelWidth = _workspaceActive ? (Loc.IsEnglish ? 400 : 320) : ExpandedWidth;
         var panelHeight = _workspaceActive ? 520 : ExpandedHeight;
@@ -662,7 +663,7 @@ public partial class ShelfWindow : Window
             }
 
             UpdateLayout();
-            ApplyNativePlacement();
+            ApplyNativePlacement(refreshPhysicalSize);
         }
         finally
         {
@@ -670,7 +671,7 @@ public partial class ShelfWindow : Window
         }
     }
 
-    private void ApplyNativePlacement()
+    private void ApplyNativePlacement(bool refreshPhysicalSize)
     {
         if (!NativeMethods.TryGetWindowRect(_hwnd, out var current))
         {
@@ -679,16 +680,15 @@ public partial class ShelfWindow : Window
 
         var screen = ResolvePlacementScreen();
         var work = screen.WorkingArea;
-        var targetLeft = work.Right - current.Width - ToPhysical(EdgeMargin);
-        var targetTop = work.Bottom - current.Height - ToPhysical(EdgeMargin);
 
-        if (_customLeftPx is { } savedLeft && _customTopPx is { } savedTop)
+        if (_customLeftPx is { } initialLeft && _customTopPx is { } initialTop
+            && screen.DeviceName != System.Windows.Forms.Screen.FromHandle(_hwnd).DeviceName)
         {
             // 先放到目标显示器的可见工作区，触发 WPF 的 WM_DPICHANGED；
             // 随后按新 DPI 的实际尺寸再裁一次。显示器拔除时也不会先闪到旧的屏幕外坐标。
             var initialAnchor = DisplayPlacement.ClampToWorkArea(
-                savedLeft,
-                savedTop,
+                initialLeft,
+                initialTop,
                 current.Width,
                 current.Height,
                 work.Left,
@@ -696,52 +696,53 @@ public partial class ShelfWindow : Window
                 work.Right,
                 work.Bottom);
             NativeMethods.TryMoveWindowNoActivate(_hwnd, initialAnchor.Left, initialAnchor.Top);
-            NativeMethods.TryGetWindowRect(_hwnd, out current);
+            if (!NativeMethods.TryGetWindowRect(_hwnd, out current)) return;
+        }
 
-            var dpi = NativeMethods.GetWindowDpi(_hwnd);
-            var pillSize = (int)Math.Round(CollapsedSize * dpi / 96d);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        // 缩放通知带来的矩形可能仍是旧尺寸，按 WPF 已应用的比例重新计算。
+        var width = refreshPhysicalSize ? (int)Math.Round(Width * dpi.DpiScaleX) : current.Width;
+        var height = refreshPhysicalSize ? (int)Math.Round(Height * dpi.DpiScaleY) : current.Height;
+        var targetLeft = work.Right - width - (int)Math.Round(EdgeMargin * dpi.DpiScaleX);
+        var targetTop = work.Bottom - height - (int)Math.Round(EdgeMargin * dpi.DpiScaleY);
+
+        if (_customLeftPx is { } savedLeft && _customTopPx is { } savedTop)
+        {
+            var pillWidth = (int)Math.Round(CollapsedSize * dpi.DpiScaleX);
+            var pillHeight = (int)Math.Round(CollapsedSize * dpi.DpiScaleY);
             var anchor = DisplayPlacement.ClampToWorkArea(
                 savedLeft,
                 savedTop,
-                pillSize,
-                pillSize,
+                pillWidth,
+                pillHeight,
                 work.Left,
                 work.Top,
                 work.Right,
                 work.Bottom);
-            savedLeft = anchor.Left;
-            savedTop = anchor.Top;
-            _customLeftPx = savedLeft;
-            _customTopPx = savedTop;
+            _customLeftPx = anchor.Left;
+            _customTopPx = anchor.Top;
             _customMonitor = screen.DeviceName;
 
-            if (_expanded)
-            {
-                targetLeft = savedLeft + pillSize - current.Width;
-                targetTop = savedTop + pillSize - current.Height;
-            }
-            else
-            {
-                targetLeft = savedLeft;
-                targetTop = savedTop;
-            }
+            targetLeft = _expanded ? anchor.Left + pillWidth - width : anchor.Left;
+            targetTop = _expanded ? anchor.Top + pillHeight - height : anchor.Top;
         }
 
         var clamped = DisplayPlacement.ClampToWorkArea(
             targetLeft,
             targetTop,
-            current.Width,
-            current.Height,
+            width,
+            height,
             work.Left,
             work.Top,
             work.Right,
             work.Bottom);
-        NativeMethods.TryMoveWindowNoActivate(_hwnd, clamped.Left, clamped.Top);
-
-        if (_customLeftPx is not null && _customTopPx is not null)
+        if (width != current.Width || height != current.Height)
         {
-            // 显示器被拔掉或工作区缩小时，上面的锚点已修正到当前显示器，关闭时一并落盘。
-            _customMonitor = screen.DeviceName;
+            NativeMethods.TrySetWindowBoundsNoActivate(_hwnd, clamped.Left, clamped.Top, width, height);
+        }
+        else if (clamped.Left != current.Left || clamped.Top != current.Top)
+        {
+            NativeMethods.TryMoveWindowNoActivate(_hwnd, clamped.Left, clamped.Top);
         }
     }
 
@@ -761,12 +762,6 @@ public partial class ShelfWindow : Window
             ? System.Windows.Forms.Screen.FromHandle(_hwnd)
             : System.Windows.Forms.Screen.PrimaryScreen
                 ?? System.Windows.Forms.Screen.AllScreens.First();
-    }
-
-    private int ToPhysical(double dip)
-    {
-        var dpi = NativeMethods.GetWindowDpi(_hwnd);
-        return (int)Math.Round(dip * dpi / 96d);
     }
 
     private void SetExpanded(bool expanded)

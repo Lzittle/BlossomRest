@@ -291,6 +291,11 @@ public static class NativeMethods
                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
 
+    /// <summary>按物理像素调整窗口位置和尺寸，保留置顶顺序及当前输入焦点。</summary>
+    public static bool TrySetWindowBoundsNoActivate(IntPtr hwnd, int left, int top, int width, int height)
+        => hwnd != IntPtr.Zero && SetWindowPos(hwnd, IntPtr.Zero, left, top, width, height,
+            SWP_NOZORDER | SWP_NOACTIVATE);
+
     /// <summary>注册全局快捷键。被占用时返回 false，不抛异常。</summary>
     public static bool TryRegisterHotKey(IntPtr hwnd, int id, uint modifiers, uint virtualKey) =>
         hwnd != IntPtr.Zero && RegisterHotKey(hwnd, id, modifiers | ModNoRepeat, virtualKey);

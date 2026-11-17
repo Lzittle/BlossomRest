@@ -118,9 +118,10 @@ public class ClipboardServiceTests
                 var text = "连续复制 " + index;
                 AssertClipboardAccepts(() => service.CopyText("previous " + index), "复制前序文字");
                 AssertClipboardAccepts(() => service.CopyMixed(SamplePaths, text, rtf), "连续混合复制");
-                Assert.Equal(SamplePaths, ReadClipboard(() => Clipboard.GetFileDropList().Cast<string>().ToArray()));
-                Assert.Equal(text, ReadClipboard(Clipboard.GetText));
-                Assert.Equal(rtf, ReadClipboard(() => Clipboard.GetData(DataFormats.Rtf) as string));
+                // 剪贴板短暂被占用时，WPF 有时返回空值而不是抛异常。只重试取不到值，错误的非空内容仍立即失败。
+                Assert.Equal(SamplePaths, ReadClipboard(() => Clipboard.GetFileDropList().Cast<string>().ToArray(), paths => paths.Length > 0));
+                Assert.Equal(text, ReadClipboard(Clipboard.GetText, value => value.Length > 0));
+                Assert.Equal(rtf, ReadClipboard(() => Clipboard.GetData(DataFormats.Rtf) as string, value => !string.IsNullOrEmpty(value)));
             }
         }));
     }
@@ -151,24 +152,26 @@ public class ClipboardServiceTests
     /// 直接读会抛出 <c>CLIPBRD_E_CANT_OPEN</c>。这类失败与写入重试同理，属于环境噪声，
     /// 不该让「写进去了但读不回来」变成假红灯；超过窗口仍读不到才判失败。
     /// </summary>
-    private static T ReadClipboard<T>(Func<T> read)
+    private static T ReadClipboard<T>(Func<T> read, Func<T, bool>? hasData = null)
     {
         var deadline = Environment.TickCount64 + ClipboardTimeoutMs;
-        Exception? lastFailure = null;
         while (true)
         {
+            string failure;
             try
             {
-                return read();
+                var value = read();
+                if (hasData is null || hasData(value)) return value;
+                failure = "读取返回空值";
             }
             catch (Exception ex)
             {
-                lastFailure = ex;
+                failure = ex.Message;
             }
 
             Assert.True(
                 Environment.TickCount64 < deadline,
-                $"读取剪贴板在 {ClipboardTimeoutMs} ms 内一直失败：{lastFailure?.Message}");
+                $"读取剪贴板在 {ClipboardTimeoutMs} ms 内一直失败：{failure}");
             Thread.Sleep(150);
         }
     }

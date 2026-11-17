@@ -7,7 +7,7 @@ This build is for small-scale usability and compatibility testing. It has not co
 - .NET 10 LTS, with the desktop runtime included in default packages. Existing items, settings and workspace data are preserved.
 - One program with live Simplified Chinese / English switching, a saved language choice and a bilingual installer.
 - A tray-resident floating shelf with show, collapse, hide and position memory.
-- The shelf recalculates its size and position when Windows display scaling changes.
+- The shelf recalculates its size and position when Windows display scaling changes. When space is tight, shelf buttons wrap and keep the title visible.
 - File, folder, text and image collection; multi-selection; paths, text and RTF text/image copying.
 - Workspace groups, search, type filters and image/video previews.
 - Confirmed moves with conflict-safe names and one-level undo; readable display-name suggestions.

@@ -103,7 +103,11 @@
         </Grid>
 
         <Grid Grid.Row="2" Margin="8,10,8,6">
-          <StackPanel x:Name="PanelContext" Orientation="Horizontal" VerticalAlignment="Center"
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <StackPanel x:Name="PanelContext" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0"
                       ToolTip="{loc:Text T5A9B30BB9B0C}">
             <Path Width="16" Height="16" Margin="0,0,6,0" Style="{StaticResource IconBase}"
                   Data="{StaticResource IconShelf}" Stroke="{DynamicResource AccentBrush}" />
@@ -111,11 +115,11 @@
                        Foreground="{DynamicResource PrimaryTextBrush}"
                        VerticalAlignment="Center" />
           </StackPanel>
-          <Border HorizontalAlignment="Right" Background="{DynamicResource SurfaceElevatedBrush}"
+          <Border Grid.Column="1" HorizontalAlignment="Right" Background="{DynamicResource SurfaceElevatedBrush}"
                   BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
                   CornerRadius="8" Padding="3,2">
             <Grid>
-              <StackPanel x:Name="HeaderActions" Orientation="Horizontal">
+              <WrapPanel x:Name="HeaderActions" Orientation="Horizontal">
                 <Button Content="{loc:Text TCF42BB2B0421}" Style="{StaticResource TextButton}" Click="OnCollectClick"
                         ToolTip="{loc:Text TF1B381976776}" />
                 <Button Content="{loc:Text T7A8A11EAD507}" Style="{StaticResource TextButton}" Click="OnAddMenuClick"
@@ -125,10 +129,10 @@
                         ToolTip="{loc:Text T7C92A48F7937}" />
                 <Button x:Name="ClearButton" Content="{loc:Text T1EF3DE06B32E}" Style="{StaticResource TextButton}" Click="OnClearClick" />
                 <Button Content="{loc:Text TAFD4B783536B}" Style="{StaticResource TextButton}" Click="OnCollapseClick" />
-              </StackPanel>
+              </WrapPanel>
 
-              <!-- 批量操作条：进入多选后替换头部按钮，位置与高度不变 -->
-              <StackPanel x:Name="BatchBar" Orientation="Horizontal" Visibility="Collapsed">
+              <!-- 多选按钮宽度不足时换行，保留标题与完整操作入口。 -->
+              <WrapPanel x:Name="BatchBar" Orientation="Horizontal" Visibility="Collapsed">
                 <TextBlock x:Name="BatchCountText" Text="{loc:Text TF30528EEE828}" FontSize="11" VerticalAlignment="Center"
                            Margin="0,0,4,0" Foreground="{DynamicResource AccentBrush}" />
                 <Button x:Name="BatchSelectAllButton" Content="{loc:Text T3A5040B68ABF}" Style="{StaticResource TextButton}"
@@ -138,7 +142,7 @@
                 <Button Content="{loc:Text T29636E43FDB4}" Style="{StaticResource TextButton}" Click="OnBatchCopyTextClick"
                         ToolTip="{loc:Text T39AA210EACC6}" />
                 <Button Content="{loc:Text TC0B3FBFF51CC}" Style="{StaticResource TextButton}" Click="OnBatchExitClick" />
-              </StackPanel>
+              </WrapPanel>
             </Grid>
           </Border>
         </Grid>
@@ -245,6 +249,7 @@
           <ListBox x:Name="ItemList" Background="Transparent" BorderThickness="0"
                    Margin="6,0" Padding="0"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                    VirtualizingPanel.IsVirtualizing="True"
                    PreviewMouseLeftButtonUp="OnItemClick"
                    PreviewMouseLeftButtonDown="OnItemDragStart"

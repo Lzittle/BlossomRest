@@ -85,7 +85,7 @@ internal static class Program
                 if (!resume)
                 {
                     var title = (TextBlock)main.FindName("PanelTitle");
-                    var actions = (StackPanel)main.FindName("HeaderActions");
+                    var actions = (Panel)main.FindName("HeaderActions");
                     var titleRight = title.TranslatePoint(new Point(title.ActualWidth, 0), main).X;
                     var actionsLeft = actions.TranslatePoint(new Point(0, 0), main).X;
                     Check("English header avoids overlap", actionsLeft >= titleRight + 4);
@@ -109,7 +109,7 @@ internal static class Program
                     Check("English dynamic filter", ((Button)main.FindName("FilterTypeButton")).Content?.ToString() == "All types");
                     ((Button)main.FindName("MultiSelectButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     await Idle();
-                    var batch = (StackPanel)main.FindName("BatchBar");
+                    var batch = (Panel)main.FindName("BatchBar");
                     Check("English selection count", ((TextBlock)main.FindName("BatchCountText")).Text == "0 selected");
                     Check("English batch fits panel", batch.TranslatePoint(new Point(batch.ActualWidth, 0), main).X <= main.ActualWidth);
                     ((Button)main.FindName("BatchSelectAllButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
